@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest an idea for the Pyahu CLI
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what is getting in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Pyahu to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches or workarounds you have tried.
+  - type: markdown
+    attributes:
+      value: |
+        Note: the v1 scope is **local infrastructure only**. Application
+        deployment, remote clusters, and Telepresence-style workflows are
+        intentionally out of scope for now.

@@ -1,0 +1,73 @@
+[tools]
+go = "1.26.4"
+k3d = "5.9.0"
+node = "24.14.0"
+goreleaser = "2"
+
+[tasks.release-check]
+description = "Validate the GoReleaser configuration"
+run = "goreleaser check"
+
+[tasks.snapshot]
+description = "Build a local release snapshot into ./dist (no publish)"
+run = "goreleaser release --snapshot --clean"
+
+[tasks.build]
+description = "Build the pyahu binary into ./bin"
+run = "mkdir -p bin && go build -o bin/pyahu ./cmd/pyahu"
+
+[tasks.install]
+description = "Install the pyahu binary into the active Go bin directory"
+run = "go install ./cmd/pyahu"
+
+[tasks.test]
+description = "Run all Go tests"
+run = "go test ./..."
+
+[tasks.lint]
+description = "Run lightweight static checks"
+run = "go vet ./..."
+
+[tasks.fmt]
+description = "Format Go source files"
+run = "gofmt -s -w cmd internal pkg"
+
+[tasks.tidy]
+description = "Tidy Go modules"
+run = "go mod tidy"
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "rm -rf bin dist website/dist"
+
+[tasks.site-install]
+description = "Install website dependencies"
+run = "npm --prefix website install"
+
+[tasks.site-dev]
+description = "Run the Astro website dev server"
+run = "npm --prefix website run dev -- --host 127.0.0.1"
+
+[tasks.site-build]
+description = "Build the Astro website"
+run = "npm --prefix website run build"
+
+[tasks.site-preview]
+description = "Preview the built Astro website"
+run = "npm --prefix website run preview -- --host 127.0.0.1"
+
+[tasks.doctor]
+description = "Run Pyahu CLI doctor against the platform example"
+depends = ["build"]
+run = "./bin/pyahu doctor -f examples/platform.yaml"
+
+[tasks.smoke]
+description = "Build and run offline CLI smoke checks"
+depends = ["build"]
+run = [
+  "./bin/pyahu --help >/dev/null",
+  "./bin/pyahu backup --help >/dev/null",
+  "./bin/pyahu restore --help >/dev/null",
+  "root=$PWD && tmp=$(mktemp -d) && mkdir -p \"$tmp/config\" \"$tmp/project\" && printf 'services:\\n  zitadel:\\n    ports:\\n      http: 18081\\n' > \"$tmp/config/pyahu.yaml\" && cp examples/platform.yaml \"$tmp/project/pyahu.yaml\" && cd \"$tmp/project\" && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" env --format json >/dev/null && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" services >/dev/null && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" describe postgres >/dev/null",
+  "./bin/pyahu completion bash >/dev/null",
+]

@@ -1,0 +1,46 @@
+# Build output
+bin/
+dist/
+**/.astro/
+
+# Go binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go coverage
+coverage.out
+coverage.html
+
+# Dependencies
+**/node_modules
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.local
+**/.pyahu/local/
+**/.pyahu/backups/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

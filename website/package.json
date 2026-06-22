@@ -1,0 +1,15 @@
+{
+  "name": "@pyahu/website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "devDependencies": {
+    "@astrojs/starlight": "^0.40.0",
+    "astro": "^6.4.5"
+  }
+}

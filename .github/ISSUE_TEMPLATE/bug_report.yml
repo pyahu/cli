@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a problem with the Pyahu CLI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a bug. Please fill in the details below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The commands you ran and the relevant `pyahu.yaml`.
+      placeholder: |
+        1. pyahu init --preset platform
+        2. pyahu up
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output
+      description: Relevant output. Re-run with `--verbose` if it helps.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Pyahu version
+      description: Output of `pyahu --version`.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS, container runtime, and k3d version
+      placeholder: "macOS 15 / Docker 27 / k3d 5.9.0"
+    validations:
+      required: true

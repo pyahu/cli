@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://cli.pyahu.io/docs
+    about: Getting started, commands, and configuration.
+  - name: Security report
+    url: https://github.com/pyahu/cli/security/advisories/new
+    about: Report a vulnerability privately (do not open a public issue).

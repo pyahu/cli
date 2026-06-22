@@ -1,0 +1,11 @@
+apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: pyahu-minimal
+
+services:
+  postgres:
+    enabled: true
+    databases:
+      - name: app
+

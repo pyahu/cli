@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+  <title id="title">Pyahu CLI em execução</title>
+  <desc id="desc">Janela de terminal mostrando comandos da Pyahu CLI e serviços locais prontos.</desc>
+  <rect width="1200" height="780" rx="26" fill="#020617"/>
+  <rect x="1" y="1" width="1198" height="778" rx="25" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <rect x="0" y="0" width="1200" height="64" rx="26" fill="#0f172a"/>
+  <circle cx="38" cy="32" r="8" fill="#f87171"/>
+  <circle cx="66" cy="32" r="8" fill="#fbbf24"/>
+  <circle cx="94" cy="32" r="8" fill="#60a5fa"/>
+  <text x="144" y="39" fill="#cbd5e1" font-family="SFMono-Regular, Consolas, monospace" font-size="20">pyahu-local</text>
+  <text x="56" y="122" fill="#60a5fa" font-family="SFMono-Regular, Consolas, monospace" font-size="22">$</text>
+  <text x="88" y="122" fill="#f4fff8" font-family="SFMono-Regular, Consolas, monospace" font-size="22">pyahu up</text>
+  <text x="56" y="174" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="20">[preflight]</text>
+  <text x="196" y="174" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">Docker, k3d e portas locais OK</text>
+  <text x="56" y="218" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="20">[cluster]</text>
+  <text x="196" y="218" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">k3d pyahu-local pronto</text>
+  <text x="56" y="262" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="20">[tls]</text>
+  <text x="196" y="262" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">Secret pyahu-local-tls aplicado</text>
+  <text x="56" y="306" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="20">[services]</text>
+  <text x="196" y="306" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">Postgres, Zitadel, RabbitMQ, Kafka Connect prontos</text>
+  <rect x="56" y="362" width="510" height="78" rx="12" fill="#0f172a" stroke="#1e3a8a"/>
+  <text x="84" y="394" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="18">Zitadel</text>
+  <text x="84" y="421" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="18">https://zitadel.localhost:8443</text>
+  <rect x="604" y="362" width="540" height="78" rx="12" fill="#0f172a" stroke="#1e3a8a"/>
+  <text x="632" y="394" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="18">Kafka Connect + Debezium</text>
+  <text x="632" y="421" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="18">CDC local para tabelas Postgres</text>
+  <text x="56" y="506" fill="#60a5fa" font-family="SFMono-Regular, Consolas, monospace" font-size="22">$</text>
+  <text x="88" y="506" fill="#f4fff8" font-family="SFMono-Regular, Consolas, monospace" font-size="22">pyahu services</text>
+  <text x="56" y="560" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">postgres</text>
+  <text x="248" y="560" fill="#60a5fa" font-family="SFMono-Regular, Consolas, monospace" font-size="20">ready</text>
+  <text x="392" y="560" fill="#cbd5e1" font-family="SFMono-Regular, Consolas, monospace" font-size="20">localhost:5432</text>
+  <text x="56" y="604" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">rabbitmq</text>
+  <text x="248" y="604" fill="#60a5fa" font-family="SFMono-Regular, Consolas, monospace" font-size="20">ready</text>
+  <text x="392" y="604" fill="#cbd5e1" font-family="SFMono-Regular, Consolas, monospace" font-size="20">localhost:5672</text>
+  <text x="56" y="648" fill="#e2e8f0" font-family="SFMono-Regular, Consolas, monospace" font-size="20">kafka-connect</text>
+  <text x="248" y="648" fill="#60a5fa" font-family="SFMono-Regular, Consolas, monospace" font-size="20">ready</text>
+  <text x="392" y="648" fill="#cbd5e1" font-family="SFMono-Regular, Consolas, monospace" font-size="20">localhost:8083</text>
+  <text x="56" y="704" fill="#60a5fa" font-family="SFMono-Regular, Consolas, monospace" font-size="22">$</text>
+  <text x="88" y="704" fill="#f4fff8" font-family="SFMono-Regular, Consolas, monospace" font-size="22">curl https://zitadel.localhost:8443/debug/healthz</text>
+  <text x="56" y="744" fill="#93c5fd" font-family="SFMono-Regular, Consolas, monospace" font-size="22">ok</text>
+</svg>

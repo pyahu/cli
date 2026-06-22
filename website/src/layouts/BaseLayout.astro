@@ -1,0 +1,118 @@
+---
+import "../styles/global.css";
+import { ui, type Lang } from "../i18n/landing";
+
+interface Props {
+  lang?: Lang;
+  title?: string;
+  description?: string;
+  current?: "home" | "docs";
+}
+
+const { lang = "pt-BR", current = "home" } = Astro.props;
+const t = ui[lang];
+const title = Astro.props.title ?? t.meta.title;
+const description = Astro.props.description ?? t.meta.description;
+
+const base = lang === "en" ? "/en" : "";
+const home = base || "/";
+const docs = `${base}/docs`;
+
+const navItems = [
+  { href: home, label: t.nav.home, key: "home" },
+  { href: docs, label: t.nav.docs, key: "docs" }
+];
+
+const langs = [
+  { code: "pt-BR" as Lang, href: "/", flag: "🇧🇷", label: "Português" },
+  { code: "en" as Lang, href: "/en", flag: "🇺🇸", label: "English" }
+];
+
+const skip = lang === "en" ? "Skip to content" : "Pular para o conteúdo";
+const year = 2026;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#020617" />
+    <title>{title}</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/pyahu-terminal.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="alternate" hreflang="pt-BR" href="/" />
+    <link rel="alternate" hreflang="en" href="/en" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{skip}</a>
+    <header class="site-header">
+      <a class="brand" href={home} aria-label="Pyahu CLI">
+        <img class="brand-mark" src="/logo.svg" alt="" width="32" height="32" />
+        <span>Pyahu CLI</span>
+      </a>
+      <nav class="site-nav" aria-label="Pyahu CLI">
+        {
+          navItems.map((item) => (
+            <a href={item.href} aria-current={current === item.key ? "page" : undefined}>
+              {item.label}
+            </a>
+          ))
+        }
+        <div class="lang-switch" role="group" aria-label="Idioma / Language">
+          {
+            langs.map((l) => (
+              <a
+                href={l.href}
+                hreflang={l.code}
+                title={l.label}
+                aria-label={l.label}
+                aria-current={lang === l.code ? "true" : undefined}
+              >
+                {l.flag}
+              </a>
+            ))
+          }
+        </div>
+        <a class="nav-cta" href="https://github.com/pyahu/cli" rel="noreferrer" target="_blank">
+          GitHub
+        </a>
+      </nav>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <img src="/logo.svg" alt="" width="28" height="28" />
+          <div>
+            <p class="footer-name">Pyahu CLI</p>
+            <p class="footer-tagline">{t.footer.tagline}</p>
+          </div>
+        </div>
+        <nav class="footer-links" aria-label={t.footer.links.docs}>
+          <a href={docs}>{t.footer.links.docs}</a>
+          <a href={`${docs}/instalacao`}>{t.footer.links.install}</a>
+          <a href={`${docs}/comandos`}>{t.footer.links.commands}</a>
+          <a href="https://github.com/pyahu/cli" rel="noreferrer" target="_blank">GitHub</a>
+        </nav>
+      </div>
+      <p class="footer-legal">© {year} Pyahu · {t.footer.legal}</p>
+    </footer>
+  </body>
+</html>

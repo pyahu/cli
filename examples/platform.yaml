@@ -1,0 +1,96 @@
+apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: pyahu-local
+
+cluster:
+  runtime: k3d
+  name: pyahu-local
+  namespace: pyahu-local-dev
+  servers: 1
+  agents: 0
+
+localTLS:
+  enabled: true
+  domains:
+    - localhost
+    - "*.localhost"
+
+services:
+  postgres:
+    enabled: true
+    version: "18.4"
+    ports:
+      primary: 5432
+      read: 5433
+    auth:
+      username: pyahu
+      password: pyahu_local
+    instances: 1
+    readReplicas: 0
+    storage: 2Gi
+    databases:
+      - name: app
+        owner: pyahu
+      - name: zitadel
+        owner: zitadel
+
+  zitadel:
+    enabled: true
+    version: v4.15.2
+    externalURL: https://zitadel.localhost
+    databaseRef: postgres
+    masterKey: MasterkeyNeedsToHave32Characters
+    admin:
+      username: admin@pyahu.local
+      password: Password1!
+
+  rabbitmq:
+    enabled: true
+    version: 4.3.2-management-alpine
+    ports:
+      amqp: 5672
+    auth:
+      username: pyahu
+      password: pyahu_local
+    replicas: 1
+    storage: 2Gi
+    management: true
+    vhosts:
+      - name: /
+    users:
+      - name: pyahu
+        password: pyahu_local
+        tags: administrator
+        permissions:
+          - vhost: /
+            configure: .*
+            write: .*
+            read: .*
+
+  kafka:
+    enabled: true
+    version: "4.3.0"
+    ports:
+      bootstrap: 9092
+    replicas: 1
+    storage: 4Gi
+    topics:
+      - name: app.events
+        partitions: 1
+        replicas: 1
+
+  kafkaConnect:
+    enabled: true
+    image: quay.io/debezium/connect
+    version: 3.5.2.Final
+    ports:
+      rest: 8083
+    replicas: 1
+    connectors: []
+
+  kafkaUI:
+    enabled: true
+    image: ghcr.io/kafbat/kafka-ui
+    version: v1.5.0
+    replicas: 1
