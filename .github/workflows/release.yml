@@ -50,6 +50,13 @@ jobs:
           release_branches: main
           default_bump: false
 
+      # github-tag-action creates the tag via the GitHub API after checkout, so
+      # the local working copy doesn't have it yet. GoReleaser requires the tag
+      # to be present locally and pointing at HEAD, so fetch it before releasing.
+      - name: Sync new tag into the local checkout
+        if: steps.tag.outputs.new_tag != ''
+        run: git fetch --tags --force
+
       - name: Release
         if: steps.tag.outputs.new_tag != ''
         uses: goreleaser/goreleaser-action@v6
