@@ -490,6 +490,43 @@ func TestZitadelDeploymentUsesCustomPostgresCredentials(t *testing.T) {
 	}
 }
 
+func TestZitadelDeploymentProvisionsServiceAccountAndBootstrapSidecar(t *testing.T) {
+	stack := testPlatformStack()
+	deployment := zitadelDeployment(stack, map[string]string{}, map[string]string{"app.kubernetes.io/name": "zitadel"}, zitadelExternal{domain: "zitadel.localhost", port: "8080"})
+	spec := deployment.Spec.Template.Spec
+	env := containerEnv(spec.Containers[0].Env)
+
+	if env["ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME"] != "pyahu-admin-sa" {
+		t.Fatalf("machine username = %q", env["ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME"])
+	}
+	if env["ZITADEL_FIRSTINSTANCE_PATPATH"] != "/pat-out/pat" {
+		t.Fatalf("PATPATH = %q", env["ZITADEL_FIRSTINSTANCE_PATPATH"])
+	}
+
+	var sidecar *corev1.Container
+	for i := range spec.Containers {
+		if spec.Containers[i].Name == "sa-bootstrap" {
+			sidecar = &spec.Containers[i]
+		}
+	}
+	if sidecar == nil {
+		t.Fatalf("sa-bootstrap sidecar not found; containers: %d", len(spec.Containers))
+	}
+	if len(sidecar.VolumeMounts) != 1 || sidecar.VolumeMounts[0].MountPath != "/pat-out" {
+		t.Fatalf("sidecar mount = %#v", sidecar.VolumeMounts)
+	}
+
+	hasVol := false
+	for _, v := range spec.Volumes {
+		if v.Name == "pat-out" && v.EmptyDir != nil {
+			hasVol = true
+		}
+	}
+	if !hasVol {
+		t.Fatalf("pat-out emptyDir volume missing; volumes: %#v", spec.Volumes)
+	}
+}
+
 func TestZitadelDeploymentMarksHTTPSExternalURLSecure(t *testing.T) {
 	stack := testPlatformStack()
 	deployment := zitadelDeployment(stack, map[string]string{}, map[string]string{"app.kubernetes.io/name": "zitadel"}, zitadelExternal{domain: "zitadel.localhost", port: "8443", secure: true})

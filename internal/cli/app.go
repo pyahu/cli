@@ -63,6 +63,7 @@ type localKube interface {
 	WaitForAPI(ctx context.Context, timeout time.Duration) error
 	ApplyStack(ctx context.Context, stack *schema.Stack, stackDir string) error
 	WaitForStack(ctx context.Context, stack *schema.Stack) error
+	CaptureZitadelPAT(ctx context.Context, stack *schema.Stack) error
 	DeleteNamespace(ctx context.Context, namespace string) error
 	Status(ctx context.Context, stack *schema.Stack) ([]kube.ServiceStatus, error)
 	Logs(ctx context.Context, namespace string, service string, follow bool, tail int64) (io.ReadCloser, error)

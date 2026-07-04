@@ -105,6 +105,16 @@ func (a *app) newUpCmd() *cobra.Command {
 				}); err != nil {
 					return err
 				}
+				if stack.ZitadelEnabled() {
+					if err := a.phase("Exportando credencial de serviço do Zitadel", func() (string, error) {
+						if err := client.CaptureZitadelPAT(ctx, stack); err != nil {
+							return "", serviceError(err.Error())
+						}
+						return "", nil
+					}); err != nil {
+						return err
+					}
+				}
 			}
 			a.printLocalTLSHint(stack, loaded.Dir)
 			return a.printSummary(stack, kubeconfig)

@@ -108,6 +108,15 @@ func zitadelDeployment(stack *schema.Stack, serviceLabels map[string]string, sel
 							{Name: "ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED", Value: "false"},
 							{Name: "ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS", Value: stack.Services.Zitadel.Admin.Username},
 							{Name: "ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED", Value: "true"},
+							// Service-account machine user + long-lived PAT for headless
+							// provisioning. FirstInstance writes the PAT to PATPATH; the
+							// sa-bootstrap sidecar exposes it and the CLI exports it to the
+							// iam-admin-pat Secret (see CaptureZitadelPAT). Applied at instance
+							// init, so a fresh database is required.
+							{Name: "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME", Value: zitadelServiceAccountUser},
+							{Name: "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME", Value: "Pyahu Admin Service Account"},
+							{Name: "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE", Value: "2100-01-01T00:00:00Z"},
+							{Name: "ZITADEL_FIRSTINSTANCE_PATPATH", Value: zitadelPATPath},
 						},
 						ReadinessProbe: httpProbe("/debug/ready", 8080, 20, 10),
 						LivenessProbe:  httpProbe("/debug/healthz", 8080, 60, 20),
@@ -115,12 +124,34 @@ func zitadelDeployment(stack *schema.Stack, serviceLabels map[string]string, sel
 							Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m"), corev1.ResourceMemory: resource.MustParse("256Mi")},
 							Limits:   corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("768Mi")},
 						},
+						VolumeMounts: []corev1.VolumeMount{{Name: "pat-out", MountPath: zitadelPATDir}},
+					}, {
+						// Idle sidecar sharing the FirstInstance PAT emptyDir so the CLI can
+						// `exec cat` and export the service-account PAT to a Secret — the
+						// zitadel image ships no shell to exec into directly. See CaptureZitadelPAT.
+						Name:         zitadelSABootstrapContainer,
+						Image:        "busybox:1.37",
+						Command:      []string{"sh", "-c", "while true; do sleep 3600; done"},
+						VolumeMounts: []corev1.VolumeMount{{Name: "pat-out", MountPath: zitadelPATDir}},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10m"), corev1.ResourceMemory: resource.MustParse("16Mi")},
+							Limits:   corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("32Mi")},
+						},
 					}},
+					Volumes: []corev1.Volume{{Name: "pat-out", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
 			},
 		},
 	}
 }
+
+const (
+	zitadelServiceAccountUser   = "pyahu-admin-sa"
+	zitadelPATDir               = "/pat-out"
+	zitadelPATPath              = "/pat-out/pat"
+	zitadelSABootstrapContainer = "sa-bootstrap"
+	zitadelPATSecretName        = "iam-admin-pat"
+)
 
 func zitadelIngress(namespace string, serviceLabels map[string]string, domain string, tlsEnabled bool, secretName string) *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix

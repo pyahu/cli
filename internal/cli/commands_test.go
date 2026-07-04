@@ -573,8 +573,9 @@ func (k fakeKube) WaitForAPI(ctx context.Context, timeout time.Duration) error {
 func (k fakeKube) ApplyStack(ctx context.Context, stack *schema.Stack, stackDir string) error {
 	return nil
 }
-func (k fakeKube) WaitForStack(ctx context.Context, stack *schema.Stack) error { return nil }
-func (k fakeKube) DeleteNamespace(ctx context.Context, namespace string) error { return nil }
+func (k fakeKube) WaitForStack(ctx context.Context, stack *schema.Stack) error      { return nil }
+func (k fakeKube) CaptureZitadelPAT(ctx context.Context, stack *schema.Stack) error { return nil }
+func (k fakeKube) DeleteNamespace(ctx context.Context, namespace string) error      { return nil }
 func (k fakeKube) Status(ctx context.Context, stack *schema.Stack) ([]kube.ServiceStatus, error) {
 	return k.statuses, nil
 }
