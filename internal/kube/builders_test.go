@@ -539,9 +539,41 @@ func TestZitadelDeploymentMarksHTTPSExternalURLSecure(t *testing.T) {
 	if env["ZITADEL_EXTERNALPORT"] != "8443" {
 		t.Fatalf("ZITADEL_EXTERNALPORT = %q", env["ZITADEL_EXTERNALPORT"])
 	}
-	// Login V2 is a separate app Pyahu does not deploy; the core must serve the v1 login.
-	if env["ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED"] != "false" {
-		t.Fatalf("ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED = %q, want false", env["ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED"])
+	// Login V2 is enabled and run as a sidecar (the legacy v1 login fails the
+	// password step in ZITADEL v4); the base URI honors the external port.
+	if env["ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED"] != "true" {
+		t.Fatalf("ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED = %q, want true", env["ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED"])
+	}
+	if got, want := env["ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI"], "https://zitadel.localhost:8443/ui/v2/login/"; got != want {
+		t.Fatalf("ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI = %q, want %q", got, want)
+	}
+}
+
+func TestZitadelDeploymentRunsLoginV2Sidecar(t *testing.T) {
+	stack := testPlatformStack()
+	deployment := zitadelDeployment(stack, map[string]string{}, map[string]string{"app.kubernetes.io/name": "zitadel"}, zitadelExternal{domain: "zitadel.localhost", port: "443", secure: true})
+	spec := deployment.Spec.Template.Spec
+
+	var login *corev1.Container
+	for i := range spec.Containers {
+		if spec.Containers[i].Name == "zitadel-login" {
+			login = &spec.Containers[i]
+		}
+	}
+	if login == nil {
+		t.Fatalf("zitadel-login sidecar not found; containers: %d", len(spec.Containers))
+	}
+	env := containerEnv(login.Env)
+	if env["ZITADEL_SERVICE_USER_TOKEN_FILE"] != zitadelLoginClientPATPath {
+		t.Fatalf("ZITADEL_SERVICE_USER_TOKEN_FILE = %q, want %q", env["ZITADEL_SERVICE_USER_TOKEN_FILE"], zitadelLoginClientPATPath)
+	}
+	if env["CUSTOM_REQUEST_HEADERS"] != "Host:zitadel.localhost,X-Forwarded-Proto:https" {
+		t.Fatalf("CUSTOM_REQUEST_HEADERS = %q", env["CUSTOM_REQUEST_HEADERS"])
+	}
+	// The core writes the login-client PAT where the sidecar reads it.
+	core := containerEnv(spec.Containers[0].Env)
+	if core["ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH"] != zitadelLoginClientPATPath {
+		t.Fatalf("ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH = %q, want %q", core["ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH"], zitadelLoginClientPATPath)
 	}
 }
 
