@@ -389,9 +389,15 @@ curl -fsS -X PUT -H 'Content-Type: application/json' --data-binary @/connector/c
 for i in $(seq 1 60); do
   status="$(curl -fsS %[1]s/connectors/%[2]s/status)"
   echo "$status"
-  if printf '%%s' "$status" | grep -q '"state":"FAILED"'; then exit 1; fi
   running_count="$(printf '%%s' "$status" | grep -o '"state":"RUNNING"' | wc -l | tr -d ' ')"
   if [ "$running_count" -ge 2 ]; then exit 0; fi
+  if printf '%%s' "$status" | grep -q '"state":"FAILED"'; then
+    # A task that failed because its source did not exist yet stays FAILED: a PUT
+    # of an unchanged config does not restart it. Ask for the restart and keep
+    # polling; a connector that is broken for a real reason still runs out of
+    # attempts below.
+    curl -fsS -X POST '%[1]s/connectors/%[2]s/restart?includeTasks=true&onlyFailed=true' >/dev/null || true
+  fi
   sleep 2
 done
 echo "connector %[2]s did not become healthy" >&2

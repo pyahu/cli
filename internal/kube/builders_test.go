@@ -859,3 +859,22 @@ func TestKafkaConnectConnectorJobWaitsForThePluginClass(t *testing.T) {
 		t.Fatalf("plugin wait runs after registration:\n%s", args)
 	}
 }
+
+func TestKafkaConnectConnectorJobRestartsFailedTasks(t *testing.T) {
+	stack := testConnectPluginStack(t)
+	connector := schema.KafkaConnectConnector{Name: "app-cdc"}
+	payload, err := kafkaConnectConnectorPayload(stack, connector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := strings.Join(kafkaConnectConnectorJob(stack, connector, "secret", payload).Spec.Template.Spec.Containers[0].Args, "\n")
+
+	// A PUT of an unchanged config does not restart a task that failed before its
+	// source existed, which is the whole point of `pyahu connectors apply`.
+	if !strings.Contains(args, "/connectors/app-cdc/restart?includeTasks=true&onlyFailed=true") {
+		t.Fatalf("connector job script does not restart failed tasks:\n%s", args)
+	}
+	if strings.Index(args, "-X PUT") > strings.Index(args, "restart?includeTasks") {
+		t.Fatalf("restart runs before the config is applied:\n%s", args)
+	}
+}
