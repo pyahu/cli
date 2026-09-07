@@ -36,6 +36,8 @@ services:
     externalURL: https://zitadel.localhost
   rabbitmq:
     enabled: true
+  redis:
+    enabled: true
   kafka:
     enabled: true
   kafkaConnect:
@@ -63,6 +65,9 @@ services:
   kafka:
     ports:
       bootstrap: 19092
+  redis:
+    ports:
+      client: 16379
 ```
 
 As **UIs HTTP** (ZITADEL, RabbitMQ, Kafka UI) não usam porta de host: elas passam
@@ -80,6 +85,36 @@ cravada, e o ZITADEL vai insistir em `:8443`, que não é mais mapeada. Troque p
 `zitadel.ports`, `rabbitmq.ports.management` e `kafkaUI.ports.http` continuam
 sendo aceitos, mas são ignorados.
 :::
+
+## Redis
+
+O serviço `redis` sobe uma instância do Valkey (compatível com Redis) com AOF
+ligado por padrão:
+
+```yaml
+services:
+  redis:
+    enabled: true
+    image: valkey/valkey     # use `redis` para a imagem oficial do Redis
+    version: 8.1-alpine
+    ports:
+      client: 6379
+    auth:
+      password: ""           # vazio = sobe sem --requirepass
+    appendOnly: true
+    storage: 1Gi
+```
+
+`appendOnly: true` é o padrão porque aplicação que usa a barreira de durabilidade
+`WAITAOF` falha **toda escrita** quando o AOF está desligado — não só perde
+durabilidade.
+
+Dentro do cluster, outros workloads (o Kafka Connect, por exemplo) alcançam o
+Redis por `redis.<namespace>.svc.cluster.local:6379`. A porta de host serve só
+para processos na sua máquina.
+
+Adicionar o Redis a um cluster que já está no ar exige `pyahu down` e `pyahu up`:
+o mapeamento de porta do host é fixado na criação do cluster.
 
 ## Config global
 

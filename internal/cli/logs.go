@@ -20,7 +20,7 @@ func (a *app) newLogsCmd() *cobra.Command {
 			}
 			service := args[0]
 			if !validService(service) {
-				return usageError("service must be one of: postgres, zitadel, rabbitmq, kafka, kafka-connect, kafka-ui")
+				return unknownServiceError()
 			}
 			rt := a.deps.newRuntime(a.opts)
 			kubeconfig, err := rt.Kubeconfig(cmd.Context(), loaded.Data.Cluster.Name)

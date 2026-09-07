@@ -50,6 +50,7 @@ func defaultDoctorStack() *schema.Stack {
 			Postgres:     &schema.PostgresService{Enabled: schema.Bool(true)},
 			Zitadel:      &schema.ZitadelService{Enabled: schema.Bool(true)},
 			RabbitMQ:     &schema.RabbitMQService{Enabled: schema.Bool(true)},
+			Redis:        &schema.RedisService{Enabled: schema.Bool(true)},
 			Kafka:        &schema.KafkaService{Enabled: schema.Bool(true)},
 			KafkaConnect: &schema.KafkaConnectService{Enabled: schema.Bool(true)},
 			KafkaUI:      &schema.KafkaUIService{Enabled: schema.Bool(true)},
@@ -59,11 +60,21 @@ func defaultDoctorStack() *schema.Stack {
 	return stack
 }
 
+// validServiceNames lists the services `describe` and `logs` accept, in the order
+// they are shown to the user.
+func validServiceNames() []string {
+	return []string{"postgres", "zitadel", "rabbitmq", "redis", "kafka", "kafka-connect", "kafka-ui"}
+}
+
 func validService(service string) bool {
-	switch service {
-	case "postgres", "zitadel", "rabbitmq", "kafka", "kafka-connect", "kafka-ui":
-		return true
-	default:
-		return false
+	for _, name := range validServiceNames() {
+		if name == service {
+			return true
+		}
 	}
+	return false
+}
+
+func unknownServiceError() error {
+	return usageError("service must be one of: " + strings.Join(validServiceNames(), ", "))
 }

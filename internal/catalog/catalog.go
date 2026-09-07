@@ -46,6 +46,7 @@ func Build(stack *schema.Stack, statuses []kube.ServiceStatus, clusterRunning bo
 		postgres(stack, statusByName["postgres"], clusterRunning),
 		zitadel(stack, statusByName["zitadel"], clusterRunning),
 		rabbitmq(stack, statusByName["rabbitmq"], clusterRunning),
+		redis(stack, statusByName["redis"], clusterRunning),
 		kafka(stack, statusByName["kafka"], clusterRunning),
 		kafkaConnect(stack, statusByName["kafka-connect"], clusterRunning),
 		kafkaUI(stack, statusByName["kafka-ui"], clusterRunning),
@@ -273,6 +274,54 @@ func rabbitmq(stack *schema.Stack, status kube.ServiceStatus, clusterRunning boo
 		Details: details,
 		Pods:    pods,
 	}
+}
+
+func redis(stack *schema.Stack, status kube.ServiceStatus, clusterRunning bool) Service {
+	ready, state, message, pods := statusFor(stack.RedisEnabled(), status, clusterRunning)
+	env := stack.ConnectionEnv()
+	version := ""
+	details := map[string]string{}
+	if stack.Services.Redis != nil {
+		version = stack.Services.Redis.Version
+		details["image"] = stack.RedisImage()
+		details["appendOnly"] = fmt.Sprintf("%t", stack.RedisAppendOnly())
+		details["storage"] = stack.Services.Redis.Storage
+		details["auth"] = redisAuthMode(stack.RedisPassword())
+	}
+	return Service{
+		Name:        "redis",
+		DisplayName: "Redis",
+		Enabled:     stack.RedisEnabled(),
+		Ready:       ready,
+		Status:      state,
+		Message:     message,
+		Version:     version,
+		Workload:    "StatefulSet/redis",
+		Namespace:   stack.Cluster.Namespace,
+		Endpoints: []Endpoint{{
+			Name:     "client",
+			Protocol: "tcp",
+			Host:     "localhost",
+			Port:     stack.RedisPort(),
+			URL:      env["REDIS_URL"],
+			Internal: stack.RedisInternalHost() + ":6379",
+		}},
+		Env: selectEnv(env,
+			"REDIS_HOST",
+			"REDIS_PORT",
+			"REDIS_PASSWORD",
+			"REDIS_URL",
+		),
+		Details: details,
+		Pods:    pods,
+	}
+}
+
+func redisAuthMode(password string) string {
+	if password == "" {
+		return "none"
+	}
+	return "requirepass"
 }
 
 func kafka(stack *schema.Stack, status kube.ServiceStatus, clusterRunning bool) Service {

@@ -13,3 +13,5 @@ Start here:
 The v1 scope is intentionally narrow: a local k3d cluster that provisions the
 base infrastructure services developers need to start building on Pyahu:
 PostgreSQL, ZITADEL, RabbitMQ, Kafka, Kafka Connect with Debezium, and Kafka UI.
+v0.2.0 adds Redis (Valkey), declarative Kafka Connect plugins, and deferred
+connector registration.

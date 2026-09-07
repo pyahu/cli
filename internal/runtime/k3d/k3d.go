@@ -19,6 +19,7 @@ const (
 	nodePortPostgresRead = 30544
 	nodePortKafka        = 30092
 	nodePortKafkaConnect = 30083
+	nodePortRedis        = 30379
 	nodePortRabbitMQ     = 30672
 )
 
@@ -209,6 +210,9 @@ func RenderConfig(stack *schema.Stack) ([]byte, error) {
 	}
 	if stack.RabbitMQEnabled() {
 		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.RabbitMQPort(), nodePortRabbitMQ), NodeFilters: []string{"server:0"}})
+	}
+	if stack.RedisEnabled() {
+		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.RedisPort(), nodePortRedis), NodeFilters: []string{"server:0"}})
 	}
 
 	cfg.Volumes = append(cfg.Volumes, volumeMapping{

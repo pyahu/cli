@@ -31,12 +31,36 @@ func TestLoadPlatformPreset(t *testing.T) {
 		t.Fatalf("namespace = %q", stack.Cluster.Namespace)
 	}
 	services := strings.Join(stack.EnabledServices(), ",")
-	if services != "postgres,zitadel,rabbitmq,kafka,kafka-connect,kafka-ui" {
+	if services != "postgres,zitadel,rabbitmq,redis,kafka,kafka-connect,kafka-ui" {
 		t.Fatalf("enabled services = %q", services)
 	}
 }
 
 func TestLoadRejectsUnknownFields(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  mongodb:
+    enabled: true
+`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected unknown field error")
+	}
+	if !strings.Contains(err.Error(), "field mongodb not found") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadRedisDefaultsAndConnectionEnv(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "pyahu.yaml")
 	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
@@ -51,11 +75,118 @@ services:
 		t.Fatal(err)
 	}
 
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stack := loaded.Data
+	redis := stack.Services.Redis
+
+	if redis.Image != "valkey/valkey" || redis.Version != "8.1-alpine" {
+		t.Fatalf("redis image = %s:%s", redis.Image, redis.Version)
+	}
+	if redis.Ports.Client != 6379 {
+		t.Fatalf("redis client port = %d", redis.Ports.Client)
+	}
+	if !stack.RedisAppendOnly() {
+		t.Fatal("appendOnly should default to true")
+	}
+	if redis.Storage != "1Gi" {
+		t.Fatalf("redis storage = %q", redis.Storage)
+	}
+	if got := stack.RedisInternalHost(); got != "redis.demo-dev.svc.cluster.local" {
+		t.Fatalf("redis internal host = %q", got)
+	}
+	if services := strings.Join(stack.EnabledServices(), ","); services != "redis" {
+		t.Fatalf("enabled services = %q", services)
+	}
+
+	env := stack.ConnectionEnv()
+	assertEnv(t, env, "REDIS_HOST", "localhost")
+	assertEnv(t, env, "REDIS_PORT", "6379")
+	assertEnv(t, env, "REDIS_PASSWORD", "")
+	assertEnv(t, env, "REDIS_URL", "redis://localhost:6379")
+}
+
+func TestRedisPasswordIsCarriedIntoTheConnectionURL(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  redis:
+    enabled: true
+    ports:
+      client: 6380
+    auth:
+      password: redis_local
+`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := loaded.Data.ConnectionEnv()
+	assertEnv(t, env, "REDIS_PASSWORD", "redis_local")
+	assertEnv(t, env, "REDIS_URL", "redis://:redis_local@localhost:6380")
+}
+
+func TestLoadRejectsUnparseableRedisStorage(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  redis:
+    enabled: true
+    storage: plenty
+`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	_, err := Load(path)
 	if err == nil {
-		t.Fatal("expected unknown field error")
+		t.Fatal("expected storage validation error")
 	}
-	if !strings.Contains(err.Error(), "field redis not found") {
+	if !strings.Contains(err.Error(), "services.redis.storage must be a Kubernetes quantity") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRedisPortMustNotCollideWithAnotherService(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  redis:
+    enabled: true
+    ports:
+      client: 5432
+  postgres:
+    enabled: true
+    ports:
+      primary: 5432
+`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected duplicated host port error")
+	}
+	if !strings.Contains(err.Error(), "services.redis.ports.client") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

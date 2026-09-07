@@ -10,7 +10,7 @@ func (a *app) newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "pyahu",
 		Short:         "Local Pyahu infrastructure for development",
-		Long:          "Pyahu CLI provisions a local k3d cluster with PostgreSQL, ZITADEL, RabbitMQ, Kafka, Kafka Connect, and Kafka UI.",
+		Long:          "Pyahu CLI provisions a local k3d cluster with PostgreSQL, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect, and Kafka UI.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       fmt.Sprintf("%s (commit %s, built %s)", a.opts.version, a.opts.commit, a.opts.date),

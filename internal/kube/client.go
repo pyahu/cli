@@ -86,6 +86,11 @@ func (c *Client) ApplyStack(ctx context.Context, stack *schema.Stack, stackDir s
 			return err
 		}
 	}
+	if stack.RedisEnabled() {
+		if err := c.applyRedis(ctx, stack); err != nil {
+			return err
+		}
+	}
 	if stack.KafkaEnabled() {
 		if err := c.applyKafka(ctx, stack); err != nil {
 			return err
@@ -126,6 +131,11 @@ func (c *Client) WaitForStack(ctx context.Context, stack *schema.Stack) error {
 	if stack.RabbitMQEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "rabbitmq", 3*time.Minute); err != nil {
 			return fmt.Errorf("wait for rabbitmq: %w", err)
+		}
+	}
+	if stack.RedisEnabled() {
+		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "redis", 3*time.Minute); err != nil {
+			return fmt.Errorf("wait for redis: %w", err)
 		}
 	}
 	if stack.KafkaEnabled() {
@@ -202,6 +212,7 @@ func (c *Client) Status(ctx context.Context, stack *schema.Stack) ([]ServiceStat
 		{name: "postgres", enabled: stack.PostgresEnabled()},
 		{name: "zitadel", enabled: stack.ZitadelEnabled()},
 		{name: "rabbitmq", enabled: stack.RabbitMQEnabled()},
+		{name: "redis", enabled: stack.RedisEnabled()},
 		{name: "kafka", enabled: stack.KafkaEnabled()},
 		{name: "kafka-connect", enabled: stack.KafkaConnectEnabled()},
 		{name: "kafka-ui", enabled: stack.KafkaUIEnabled()},

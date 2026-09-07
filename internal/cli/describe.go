@@ -20,7 +20,7 @@ func (a *app) newDescribeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			if !validService(name) {
-				return usageError("service must be one of: postgres, zitadel, rabbitmq, kafka, kafka-connect, kafka-ui")
+				return unknownServiceError()
 			}
 			snapshot, err := a.loadServiceSnapshot(cmd.Context())
 			if err != nil {
@@ -28,7 +28,7 @@ func (a *app) newDescribeCmd() *cobra.Command {
 			}
 			service, ok := findSnapshotService(snapshot.Services, name)
 			if !ok {
-				return usageError("service must be one of: postgres, zitadel, rabbitmq, kafka, kafka-connect, kafka-ui")
+				return unknownServiceError()
 			}
 			if a.opts.output == "json" {
 				return writeJSON(a.opts.out, service)

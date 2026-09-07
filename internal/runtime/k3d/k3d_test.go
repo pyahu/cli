@@ -154,3 +154,24 @@ ports:
 		t.Fatalf("missing ports = %#v", missing)
 	}
 }
+
+func TestRenderConfigIncludesRedisPortWhenEnabled(t *testing.T) {
+	stack := &schema.Stack{
+		APIVersion: schema.APIVersion,
+		Kind:       schema.Kind,
+		Metadata:   schema.Metadata{Name: "demo"},
+		Cluster:    schema.ClusterConfig{Runtime: "k3d", Name: "demo", Namespace: "demo-dev", Servers: 1},
+		Services: schema.Services{
+			Redis: &schema.RedisService{Enabled: schema.Bool(true), Ports: schema.RedisPorts{Client: 6380}},
+		},
+	}
+	stack.SetDefaults()
+
+	data, err := RenderConfig(stack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "port: 6380:30379") {
+		t.Fatalf("redis port mapping missing:\n%s", data)
+	}
+}

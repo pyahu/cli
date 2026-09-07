@@ -36,6 +36,8 @@ services:
     externalURL: https://zitadel.localhost
   rabbitmq:
     enabled: true
+  redis:
+    enabled: true
   kafka:
     enabled: true
   kafkaConnect:
@@ -63,6 +65,9 @@ services:
   kafka:
     ports:
       bootstrap: 19092
+  redis:
+    ports:
+      client: 16379
 ```
 
 The **HTTP UIs** (ZITADEL, RabbitMQ, Kafka UI) do not use a host port: they go
@@ -80,6 +85,36 @@ with `externalURL: https://zitadel.localhost` (without the port) and run `pyahu 
 `zitadel.ports`, `rabbitmq.ports.management`, and `kafkaUI.ports.http` fields are still
 accepted, but they are ignored.
 :::
+
+## Redis
+
+The `redis` service runs a single Valkey instance (Redis-compatible) with AOF
+enabled by default:
+
+```yaml
+services:
+  redis:
+    enabled: true
+    image: valkey/valkey     # use `redis` for the official Redis image
+    version: 8.1-alpine
+    ports:
+      client: 6379
+    auth:
+      password: ""           # empty starts the server without --requirepass
+    appendOnly: true
+    storage: 1Gi
+```
+
+`appendOnly: true` is the default because an application that uses the `WAITAOF`
+durability barrier fails **every write** when AOF is off — it does not merely
+lose durability.
+
+Inside the cluster, other workloads (Kafka Connect, for example) reach Redis at
+`redis.<namespace>.svc.cluster.local:6379`. The host port is only for processes
+on your machine.
+
+Adding Redis to a cluster that is already running requires `pyahu down` and
+`pyahu up`: the host port mapping is fixed when the cluster is created.
 
 ## Global config
 

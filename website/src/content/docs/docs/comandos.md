@@ -161,13 +161,14 @@ cluster:   pyahu-local
 namespace: pyahu-local-dev
 state:     running
 
-SERVICE        STATUS  VERSION  ENDPOINTS
-postgres       ready   18.4     localhost:5432
-zitadel        ready   v4.15.2  https://zitadel.localhost
-rabbitmq       ready   4.3.2    localhost:5672, https://rabbitmq.localhost
-kafka          ready   4.3.0    localhost:9092
-kafka-connect  ready   3.5.2    http://localhost:8083
-kafka-ui       ready   v1.5.0   https://kafka-ui.localhost
+SERVICE        STATUS  VERSION     ENDPOINTS
+postgres       ready   18.4        localhost:5432
+zitadel        ready   v4.15.2     https://zitadel.localhost
+rabbitmq       ready   4.3.2       localhost:5672, https://rabbitmq.localhost
+redis          ready   8.1-alpine  localhost:6379
+kafka          ready   4.3.0       localhost:9092
+kafka-connect  ready   3.5.2       http://localhost:8083
+kafka-ui       ready   v1.5.0      https://kafka-ui.localhost
 ```
 
 ### `pyahu describe <service>`
@@ -175,7 +176,7 @@ kafka-ui       ready   v1.5.0   https://kafka-ui.localhost
 Detalhes de um serviço: status, endpoints (host + interno do cluster), variáveis de ambiente,
 detalhes da config e pods.
 
-Serviços válidos: `postgres`, `zitadel`, `rabbitmq`, `kafka`, `kafka-connect`, `kafka-ui`.
+Serviços válidos: `postgres`, `zitadel`, `rabbitmq`, `redis`, `kafka`, `kafka-connect`, `kafka-ui`.
 
 | Flag | Padrão | Descrição |
 | --- | --- | --- |
@@ -227,7 +228,8 @@ eval "$(pyahu env)"       # carrega no shell atual
 ```
 
 As variáveis cobrem cada serviço habilitado, por exemplo `POSTGRES_URL`,
-`RABBITMQ_URL`, `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_CONNECT_URL`, `ZITADEL_ISSUER`.
+`RABBITMQ_URL`, `REDIS_URL`, `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_CONNECT_URL`,
+`ZITADEL_ISSUER`.
 
 ### `pyahu kubeconfig`
 

@@ -128,6 +128,17 @@ services:
             write: .*
             read: .*
 
+  redis:
+    enabled: true
+    image: valkey/valkey
+    version: 8.1-alpine
+    ports:
+      client: 6379
+    auth:
+      password: ""
+    appendOnly: true
+    storage: 1Gi
+
   kafka:
     enabled: true
     version: "4.3.0"
@@ -185,8 +196,8 @@ Validation rules:
 
 - Unknown fields are errors.
 - Names must be DNS-label compatible unless otherwise documented.
-- Service keys must be one of `postgres`, `zitadel`, `rabbitmq`, `kafka`,
-  `kafkaConnect`, or `kafkaUI`.
+- Service keys must be one of `postgres`, `zitadel`, `rabbitmq`, `redis`,
+  `kafka`, `kafkaConnect`, or `kafkaUI`.
 - Local host ports must be unique.
 - Secret values cannot be read directly from CLI flags.
 - Relative paths are resolved from the stack file directory.
@@ -415,6 +426,54 @@ Connection output:
 - `RABBITMQ_USER`
 - `RABBITMQ_PASSWORD`
 - `RABBITMQ_URL`
+
+### Redis
+
+```yaml
+services:
+  redis:
+    enabled: true
+    image: valkey/valkey
+    version: 8.1-alpine
+    ports:
+      client: 6379
+    auth:
+      password: ""
+    appendOnly: true
+    storage: 1Gi
+```
+
+Defaults:
+
+- `enabled`: `true` when `services.redis` is present
+- `image`: `valkey/valkey` (Valkey is the upstream-compatible default; set
+  `image: redis` for the Redis image)
+- `version`: `8.1-alpine`
+- `ports.client`: `6379`
+- `auth.password`: empty, which starts the server without `--requirepass`
+- `appendOnly`: `true` → container args `--appendonly yes --appendfsync everysec`.
+  Clients that use the `WAITAOF` durability barrier fail **every write** when AOF
+  is off, so AOF-on is the safe default for a local stack.
+- `storage`: `1Gi`
+
+The server runs as a single-replica StatefulSet with the PVC mounted at `/data`
+and TCP readiness/liveness probes on 6379 (the probe is image-agnostic: it does
+not depend on `valkey-cli` vs `redis-cli`). When a password is set it is read
+from the local credentials Secret, not written into the pod spec.
+
+Adding Redis to a cluster that is already running requires `pyahu down` and
+`pyahu up`, because the host port mapping is fixed when the cluster is created.
+
+In-cluster DNS for other workloads: `redis.<namespace>.svc.cluster.local:6379`.
+That is the address Kafka Connect and other in-cluster clients use; the host port
+is only for processes on the developer machine.
+
+Connection output:
+
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+- `REDIS_URL` (`redis://[:password@]localhost:<port>`)
 
 ### Kafka
 

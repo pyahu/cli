@@ -48,6 +48,7 @@ func (c *Client) applyCredentials(ctx context.Context, stack *schema.Stack) erro
 			"POSTGRES_REPLICATION_PASSWORD": stack.PostgresReplicationPassword(),
 			"RABBITMQ_USER":                 stack.RabbitMQUser(),
 			"RABBITMQ_PASSWORD":             stack.RabbitMQPassword(),
+			"REDIS_PASSWORD":                stack.RedisPassword(),
 			"ZITADEL_ADMIN_USER":            stack.ZitadelAdminUser(),
 			"ZITADEL_ADMIN_PASSWORD":        stack.ZitadelAdminPassword(),
 			"ZITADEL_MASTERKEY":             stack.ZitadelMasterKey(),

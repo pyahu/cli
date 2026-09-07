@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -28,6 +30,9 @@ const (
 	DefaultKafkaUIImage        = "ghcr.io/kafbat/kafka-ui"
 	DefaultKafkaUIVersion      = "v1.5.0"
 	DefaultKafkaUIPort         = 8084
+	DefaultRedisImage          = "valkey/valkey"
+	DefaultRedisVersion        = "8.1-alpine"
+	DefaultRedisPort           = 6379
 	DefaultRabbitMQVersion     = "4.3.2-management-alpine"
 	DefaultRabbitMQPort        = 5672
 	DefaultRabbitMQMgmtPort    = 15672
@@ -104,6 +109,7 @@ type Services struct {
 	Postgres     *PostgresService     `json:"postgres,omitempty" yaml:"postgres,omitempty"`
 	Zitadel      *ZitadelService      `json:"zitadel,omitempty" yaml:"zitadel,omitempty"`
 	RabbitMQ     *RabbitMQService     `json:"rabbitmq,omitempty" yaml:"rabbitmq,omitempty"`
+	Redis        *RedisService        `json:"redis,omitempty" yaml:"redis,omitempty"`
 	Kafka        *KafkaService        `json:"kafka,omitempty" yaml:"kafka,omitempty"`
 	KafkaConnect *KafkaConnectService `json:"kafkaConnect,omitempty" yaml:"kafkaConnect,omitempty"`
 	KafkaUI      *KafkaUIService      `json:"kafkaUI,omitempty" yaml:"kafkaUI,omitempty"`
@@ -190,6 +196,26 @@ type RabbitMQPermission struct {
 	Configure string `json:"configure,omitempty" yaml:"configure,omitempty"`
 	Write     string `json:"write,omitempty" yaml:"write,omitempty"`
 	Read      string `json:"read,omitempty" yaml:"read,omitempty"`
+}
+
+type RedisService struct {
+	Enabled *bool      `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Image   string     `json:"image,omitempty" yaml:"image,omitempty"`
+	Version string     `json:"version,omitempty" yaml:"version,omitempty"`
+	Ports   RedisPorts `json:"ports,omitempty" yaml:"ports,omitempty"`
+	Auth    RedisAuth  `json:"auth,omitempty" yaml:"auth,omitempty"`
+	// AppendOnly defaults to true: clients that use the WAITAOF durability
+	// barrier fail every write when AOF is off.
+	AppendOnly *bool  `json:"appendOnly,omitempty" yaml:"appendOnly,omitempty"`
+	Storage    string `json:"storage,omitempty" yaml:"storage,omitempty"`
+}
+
+type RedisPorts struct {
+	Client int `json:"client,omitempty" yaml:"client,omitempty"`
+}
+
+type RedisAuth struct {
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 }
 
 type KafkaService struct {
@@ -447,6 +473,21 @@ func (s *Stack) SetDefaults() {
 			}
 		}
 	}
+	if s.Services.Redis != nil {
+		s.Services.Redis.Ports.Client = defaultPort(s.Services.Redis.Ports.Client, 0, DefaultRedisPort)
+		if s.Services.Redis.Image == "" {
+			s.Services.Redis.Image = DefaultRedisImage
+		}
+		if s.Services.Redis.Version == "" {
+			s.Services.Redis.Version = DefaultRedisVersion
+		}
+		if s.Services.Redis.AppendOnly == nil {
+			s.Services.Redis.AppendOnly = Bool(true)
+		}
+		if s.Services.Redis.Storage == "" {
+			s.Services.Redis.Storage = "1Gi"
+		}
+	}
 	if s.Services.Kafka != nil {
 		s.Services.Kafka.Ports.Bootstrap = defaultPort(s.Services.Kafka.Ports.Bootstrap, s.Cluster.LegacyPorts.Kafka, DefaultKafkaPort)
 		if s.Services.Kafka.Version == "" {
@@ -619,6 +660,17 @@ func (s *Stack) Validate() error {
 			}
 		}
 	}
+	if s.RedisEnabled() {
+		if strings.TrimSpace(s.Services.Redis.Image) == "" {
+			errs = append(errs, "services.redis.image is required")
+		}
+		if strings.TrimSpace(s.Services.Redis.Version) == "" {
+			errs = append(errs, "services.redis.version is required")
+		}
+		if _, err := resource.ParseQuantity(s.Services.Redis.Storage); err != nil {
+			errs = append(errs, "services.redis.storage must be a Kubernetes quantity")
+		}
+	}
 	if s.KafkaEnabled() {
 		for i, topic := range s.Services.Kafka.Topics {
 			if !topicNameRE.MatchString(topic.Name) {
@@ -786,6 +838,9 @@ func (s *Stack) EnabledServices() []string {
 	if s.RabbitMQEnabled() {
 		services = append(services, "rabbitmq")
 	}
+	if s.RedisEnabled() {
+		services = append(services, "redis")
+	}
 	if s.KafkaEnabled() {
 		services = append(services, "kafka")
 	}
@@ -808,6 +863,10 @@ func (s *Stack) ZitadelEnabled() bool {
 
 func (s *Stack) RabbitMQEnabled() bool {
 	return s.Services.RabbitMQ != nil && enabled(s.Services.RabbitMQ.Enabled)
+}
+
+func (s *Stack) RedisEnabled() bool {
+	return s.Services.Redis != nil && enabled(s.Services.Redis.Enabled)
 }
 
 func (s *Stack) KafkaEnabled() bool {
@@ -911,6 +970,12 @@ func (s *Stack) ConnectionEnv() map[string]string {
 		env["RABBITMQ_PASSWORD"] = s.RabbitMQPassword()
 		env["RABBITMQ_URL"] = fmt.Sprintf("amqp://%s:%s@localhost:%d", s.RabbitMQUser(), s.RabbitMQPassword(), s.RabbitMQPort())
 	}
+	if s.RedisEnabled() {
+		env["REDIS_HOST"] = "localhost"
+		env["REDIS_PORT"] = fmt.Sprintf("%d", s.RedisPort())
+		env["REDIS_PASSWORD"] = s.RedisPassword()
+		env["REDIS_URL"] = s.RedisURL()
+	}
 	if s.KafkaEnabled() {
 		env["KAFKA_BOOTSTRAP_SERVERS"] = fmt.Sprintf("localhost:%d", s.KafkaPort())
 	}
@@ -963,6 +1028,52 @@ func (s *Stack) RabbitMQManagementPort() int {
 		return DefaultRabbitMQMgmtPort
 	}
 	return s.Services.RabbitMQ.Ports.Management
+}
+
+func (s *Stack) RedisPort() int {
+	if s.Services.Redis == nil || s.Services.Redis.Ports.Client == 0 {
+		return DefaultRedisPort
+	}
+	return s.Services.Redis.Ports.Client
+}
+
+func (s *Stack) RedisPassword() string {
+	if s.Services.Redis == nil {
+		return ""
+	}
+	return s.Services.Redis.Auth.Password
+}
+
+// RedisAppendOnly reports whether the server runs with AOF persistence (default on).
+func (s *Stack) RedisAppendOnly() bool {
+	return s.Services.Redis == nil || s.Services.Redis.AppendOnly == nil || *s.Services.Redis.AppendOnly
+}
+
+func (s *Stack) RedisImage() string {
+	image := DefaultRedisImage
+	version := DefaultRedisVersion
+	if s.Services.Redis != nil {
+		if s.Services.Redis.Image != "" {
+			image = s.Services.Redis.Image
+		}
+		if s.Services.Redis.Version != "" {
+			version = s.Services.Redis.Version
+		}
+	}
+	return image + ":" + version
+}
+
+// RedisInternalHost is the in-cluster DNS name other workloads (Kafka Connect,
+// for example) use to reach Redis; the host port is only for the developer machine.
+func (s *Stack) RedisInternalHost() string {
+	return fmt.Sprintf("redis.%s.svc.cluster.local", s.Cluster.Namespace)
+}
+
+func (s *Stack) RedisURL() string {
+	if password := s.RedisPassword(); password != "" {
+		return fmt.Sprintf("redis://:%s@localhost:%d", password, s.RedisPort())
+	}
+	return fmt.Sprintf("redis://localhost:%d", s.RedisPort())
 }
 
 func (s *Stack) KafkaPort() int {
@@ -1235,6 +1346,9 @@ func (s *Stack) enabledHostPorts() []hostPort {
 	}
 	if s.RabbitMQEnabled() {
 		values = append(values, hostPort{field: "services.rabbitmq.ports.amqp", port: s.RabbitMQPort()})
+	}
+	if s.RedisEnabled() {
+		values = append(values, hostPort{field: "services.redis.ports.client", port: s.RedisPort()})
 	}
 	if s.KafkaEnabled() {
 		values = append(values, hostPort{field: "services.kafka.ports.bootstrap", port: s.KafkaPort()})

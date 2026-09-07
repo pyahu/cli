@@ -147,3 +147,25 @@ func TestCheckPortsUsesTraefikEntrypointForHTTPServices(t *testing.T) {
 		t.Fatalf("traefik http entrypoint check not found: %#v", checks)
 	}
 }
+
+func TestCheckPortsIncludesRedisWhenEnabled(t *testing.T) {
+	stack := &schema.Stack{
+		Metadata: schema.Metadata{Name: "demo"},
+		Services: schema.Services{
+			Redis: &schema.RedisService{Enabled: schema.Bool(true)},
+		},
+	}
+	stack.SetDefaults()
+
+	checks := portChecks(stack)
+	found := false
+	for _, check := range checks {
+		if check.name == "redis" && check.enabled && check.port == 6379 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("redis port check not found: %#v", checks)
+	}
+}

@@ -319,6 +319,17 @@ services:
             write: .*
             read: .*
 
+  redis:
+    enabled: true
+    image: valkey/valkey
+    version: 8.1-alpine
+    ports:
+      client: 6379
+    auth:
+      password: ""
+    appendOnly: true
+    storage: 1Gi
+
   kafka:
     enabled: true
     version: "4.3.0"

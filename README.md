@@ -25,8 +25,8 @@
 
 Pyahu CLI provisions a local development stack on a [k3d](https://k3d.io) cluster
 with lightweight Kubernetes manifests the CLI generates for you. One command
-brings up PostgreSQL, ZITADEL, RabbitMQ, Kafka, Kafka Connect with Debezium, and
-Kafka UI, with local TLS and predictable endpoints, and without turning your
+brings up PostgreSQL, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect with Debezium,
+and Kafka UI, with local TLS and predictable endpoints, and without turning your
 setup into a side project.
 
 It is intentionally lightweight: k3d plus generated resources. Normal operation
@@ -38,7 +38,7 @@ $ pyahu up
 ✓ Checando dependências locais  (137ms)
 ✓ Cluster pyahu-local criado  (8.4s)
 ✓ Aguardando a API do Kubernetes  (3.1s)
-✓ Configurando serviços: postgres, zitadel, rabbitmq, kafka, kafka-connect, kafka-ui
+✓ Configurando serviços: postgres, zitadel, rabbitmq, redis, kafka, kafka-connect, kafka-ui
 
 ✓ Pyahu local stack is ready
 ```
@@ -50,6 +50,7 @@ $ pyahu up
 | PostgreSQL | Relational database (optional read replicas) | `localhost:5432` |
 | ZITADEL | Identity & OIDC over local HTTPS | `https://zitadel.localhost` |
 | RabbitMQ | AMQP messaging + management UI | `localhost:5672` · `https://rabbitmq.localhost` |
+| Redis | Valkey key-value store, AOF on by default | `localhost:6379` |
 | Kafka | Event streaming broker (KRaft) | `localhost:9092` |
 | Kafka Connect | Declarative connectors with Debezium CDC | `http://localhost:8083` |
 | Kafka UI | Topics, connectors and consumers | `https://kafka-ui.localhost` |

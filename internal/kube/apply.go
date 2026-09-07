@@ -21,6 +21,7 @@ const (
 	nodePortPostgresRead       = 30544
 	nodePortKafka              = 30092
 	nodePortKafkaConnect       = 30083
+	nodePortRedis              = 30379
 	nodePortRabbitMQ           = 30672
 	nodePortRabbitMQManagement = 31672
 )

@@ -600,3 +600,72 @@ func containerEnv(env []corev1.EnvVar) map[string]string {
 	}
 	return values
 }
+
+func TestRedisStatefulSetEnablesAppendOnlyByDefault(t *testing.T) {
+	stack := testPlatformStack()
+	stack.Services.Redis = &schema.RedisService{Enabled: schema.Bool(true)}
+	stack.SetDefaults()
+
+	sts := redisStatefulSet(stack, map[string]string{}, map[string]string{"app.kubernetes.io/name": "redis"})
+	container := sts.Spec.Template.Spec.Containers[0]
+	args := strings.Join(container.Args, " ")
+
+	if container.Image != "valkey/valkey:8.1-alpine" {
+		t.Fatalf("image = %q", container.Image)
+	}
+	if args != "--appendonly yes --appendfsync everysec" {
+		t.Fatalf("redis args = %q", args)
+	}
+	if container.VolumeMounts[0].MountPath != "/data" {
+		t.Fatalf("data mount path = %q", container.VolumeMounts[0].MountPath)
+	}
+	claim := sts.Spec.VolumeClaimTemplates[0]
+	if got := claim.Spec.Resources.Requests.Storage().String(); got != "1Gi" {
+		t.Fatalf("data claim storage = %q", got)
+	}
+	if container.ReadinessProbe.TCPSocket == nil || container.ReadinessProbe.TCPSocket.Port.IntValue() != 6379 {
+		t.Fatalf("readiness probe = %#v", container.ReadinessProbe)
+	}
+}
+
+func TestRedisStatefulSetOmitsAppendOnlyWhenDisabled(t *testing.T) {
+	stack := testPlatformStack()
+	stack.Services.Redis = &schema.RedisService{Enabled: schema.Bool(true), AppendOnly: schema.Bool(false)}
+	stack.SetDefaults()
+
+	sts := redisStatefulSet(stack, map[string]string{}, map[string]string{})
+	if args := strings.Join(sts.Spec.Template.Spec.Containers[0].Args, " "); args != "" {
+		t.Fatalf("redis args = %q", args)
+	}
+}
+
+func TestRedisStatefulSetTakesPasswordFromCredentialsSecret(t *testing.T) {
+	stack := testPlatformStack()
+	stack.Services.Redis = &schema.RedisService{Enabled: schema.Bool(true), Auth: schema.RedisAuth{Password: "redis_local"}}
+	stack.SetDefaults()
+
+	container := redisStatefulSet(stack, map[string]string{}, map[string]string{}).Spec.Template.Spec.Containers[0]
+	args := strings.Join(container.Args, " ")
+
+	if !strings.Contains(args, "--requirepass $(REDIS_PASSWORD)") {
+		t.Fatalf("redis args = %q", args)
+	}
+	if strings.Contains(args, "redis_local") {
+		t.Fatalf("password leaked into the pod spec: %q", args)
+	}
+	source := container.Env[0].ValueFrom.SecretKeyRef
+	if container.Env[0].Name != "REDIS_PASSWORD" || source.Name != "pyahu-local-credentials" || source.Key != "REDIS_PASSWORD" {
+		t.Fatalf("password env = %#v", container.Env[0])
+	}
+}
+
+func TestRedisServiceUsesStableNodePort(t *testing.T) {
+	svc := redisService("pyahu-local-dev", map[string]string{}, map[string]string{})
+
+	if got := svc.Spec.Ports[0].NodePort; got != nodePortRedis {
+		t.Fatalf("redis nodePort = %d", got)
+	}
+	if got := svc.Spec.Ports[0].Port; got != 6379 {
+		t.Fatalf("redis port = %d", got)
+	}
+}

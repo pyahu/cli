@@ -104,6 +104,7 @@ func portChecks(stack *schema.Stack) []portCheck {
 		{name: "postgres", enabled: stack.PostgresEnabled(), port: stack.PostgresPort(), field: "services.postgres.ports.primary"},
 		{name: "postgres-read", enabled: stack.PostgresEnabled() && stack.PostgresReadReplicas() > 0, port: stack.PostgresReadPort(), field: "services.postgres.ports.read"},
 		{name: "rabbitmq", enabled: stack.RabbitMQEnabled(), port: stack.RabbitMQPort(), field: "services.rabbitmq.ports.amqp"},
+		{name: "redis", enabled: stack.RedisEnabled(), port: stack.RedisPort(), field: "services.redis.ports.client"},
 		{name: "kafka", enabled: stack.KafkaEnabled(), port: stack.KafkaPort(), field: "services.kafka.ports.bootstrap"},
 		{name: "kafka-connect", enabled: stack.KafkaConnectEnabled(), port: stack.KafkaConnectPort(), field: "services.kafkaConnect.ports.rest"},
 	}
