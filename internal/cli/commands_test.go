@@ -20,6 +20,7 @@ import (
 	"github.com/pyahu/cli/internal/config"
 	"github.com/pyahu/cli/internal/doctor"
 	"github.com/pyahu/cli/internal/kube"
+	"github.com/pyahu/cli/internal/update"
 	"github.com/pyahu/cli/pkg/schema"
 )
 
@@ -817,5 +818,70 @@ func TestUpWarnsAboutPendingOptionalConnectors(t *testing.T) {
 	}
 	if !strings.Contains(stdout, warning) {
 		t.Fatalf("up summary does not carry the optional-connector warning:\n%s", stdout)
+	}
+}
+
+func stubUpgrade(current string, latest string) func(time.Duration) (update.Result, bool) {
+	return func(time.Duration) (update.Result, bool) {
+		return update.Result{Current: current, Latest: latest}, true
+	}
+}
+
+func TestUpgradeNoticeGoesToStderrNotStdout(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	a := newApp("0.4.0", "commit", "date", &stdout, &stderr)
+	a.opts.noColor = true
+
+	a.printUpgradeNotice(stubUpgrade("0.4.0", "0.6.1"))
+
+	// stdout is consumed by `eval "$(pyahu env)"`; a banner there would be
+	// evaluated as shell.
+	if stdout.Len() != 0 {
+		t.Fatalf("upgrade notice leaked to stdout:\n%s", stdout.String())
+	}
+	got := stderr.String()
+	for _, want := range []string{
+		"pyahu 0.4.0 is out of date — 0.6.1 is available",
+		"https://github.com/pyahu/cli/releases/tag/v0.6.1",
+		update.OptOutEnv,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("stderr does not contain %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestUpgradeNoticeIsSuppressedForMachineOutput(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(*app)
+	}{
+		// JSON output is parsed by scripts; --quiet asked for silence.
+		{"json", func(a *app) { a.opts.output = "json" }},
+		{"quiet", func(a *app) { a.opts.quiet = true }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			a := newApp("0.4.0", "commit", "date", &stdout, &stderr)
+			tc.mutate(a)
+
+			a.printUpgradeNotice(stubUpgrade("0.4.0", "0.6.1"))
+
+			if stdout.Len() != 0 || stderr.Len() != 0 {
+				t.Fatalf("expected silence, got stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestUpgradeNoticeIsSilentWhenUpToDate(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	a := newApp("0.6.1", "commit", "date", &stdout, &stderr)
+
+	a.printUpgradeNotice(func(time.Duration) (update.Result, bool) { return update.Result{}, false })
+
+	if stdout.Len() != 0 || stderr.Len() != 0 {
+		t.Fatalf("expected silence, got stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
 }

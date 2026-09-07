@@ -435,6 +435,39 @@ pyahu env --format json
 pyahu certs status --output json
 ```
 
+---
+
+## Out-of-date notice
+
+When a newer release exists, the CLI prints a notice at the end of any command:
+
+```text
+⚠ pyahu 0.4.0 is out of date — 0.6.1 is available
+  curl -fsSL https://cli.pyahu.io/install.sh | sh
+  https://github.com/pyahu/cli/releases/tag/v0.6.1
+  silence this with PYAHU_NO_UPDATE_CHECK=1
+```
+
+The suggested command follows **how you installed it** — the CLI reads its own binary path: under
+the mise install tree it becomes `mise use github:pyahu/cli@<version>`, under `GOBIN`/`GOPATH` it
+becomes `go install`, and otherwise the install script.
+
+The notice goes to **stderr**, never stdout: `eval "$(pyahu env)"` and `--output json` consume
+stdout, and a banner there would be evaluated as shell or break the JSON.
+
+It stays silent when:
+
+| Situation | Why |
+| --- | --- |
+| `--output json` or `--quiet` | the output is read by a script |
+| Locally built binary (version `dev`) | there is no version to compare |
+| `PYAHU_NO_UPDATE_CHECK` is set | explicit opt-out; it does not even reach the network |
+| Offline, behind a proxy, or GitHub API rate limited | the check fails silently |
+
+The lookup runs **alongside** the command and the answer is cached for 24h in
+`<config dir>/pyahu/version-check.json`, so it costs no wall-clock time: the command never waits
+more than 700ms for it, and the next day the answer is already on disk.
+
 ## Recommended flow
 
 ```bash

@@ -15,6 +15,7 @@ import (
 	"github.com/pyahu/cli/internal/doctor"
 	"github.com/pyahu/cli/internal/kube"
 	"github.com/pyahu/cli/internal/runtime/k3d"
+	"github.com/pyahu/cli/internal/update"
 	"github.com/pyahu/cli/pkg/schema"
 )
 
@@ -77,6 +78,11 @@ func Execute(version string, commit string, date string) int {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// Started before the command and harvested after, so looking for a newer
+	// release costs the command no wall-clock time.
+	upgrade := update.New().Start(context.WithoutCancel(ctx), version)
+	defer a.printUpgradeNotice(upgrade)
 
 	cmd := a.newRootCmd()
 	cmd.SetContext(ctx)
