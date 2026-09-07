@@ -3,6 +3,8 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -57,6 +59,7 @@ var (
 	dnsLabelRE  = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 	dbNameRE    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	topicNameRE = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+	sha256RE    = regexp.MustCompile(`^[a-f0-9]{64}$`)
 )
 
 type Stack struct {
@@ -237,7 +240,20 @@ type KafkaConnectService struct {
 	Version    string                  `json:"version,omitempty" yaml:"version,omitempty"`
 	Ports      KafkaConnectPorts       `json:"ports,omitempty" yaml:"ports,omitempty"`
 	Replicas   int                     `json:"replicas,omitempty" yaml:"replicas,omitempty"`
+	Plugins    []KafkaConnectPlugin    `json:"plugins,omitempty" yaml:"plugins,omitempty"`
 	Connectors []KafkaConnectConnector `json:"connectors,omitempty" yaml:"connectors,omitempty"`
+}
+
+// KafkaConnectPlugin is one artifact installed into the worker's plugin
+// directory <name> before it starts. Repeating a name is allowed and
+// meaningful: Kafka Connect isolates each plugin directory in its own
+// classloader, so a transform that needs a connector's classes has to land in
+// the same directory as the connector.
+type KafkaConnectPlugin struct {
+	Name   string `json:"name" yaml:"name"`
+	URL    string `json:"url,omitempty" yaml:"url,omitempty"`
+	SHA256 string `json:"sha256,omitempty" yaml:"sha256,omitempty"`
+	File   string `json:"file,omitempty" yaml:"file,omitempty"`
 }
 
 type KafkaConnectPorts struct {
@@ -693,6 +709,34 @@ func (s *Stack) Validate() error {
 		}
 		if s.Services.KafkaConnect.Replicas < 1 {
 			errs = append(errs, "services.kafkaConnect.replicas must be at least 1")
+		}
+		for i, plugin := range s.Services.KafkaConnect.Plugins {
+			if !dnsLabelRE.MatchString(plugin.Name) {
+				errs = append(errs, fmt.Sprintf("services.kafkaConnect.plugins[%d].name must be a DNS label", i))
+			}
+			hasURL := strings.TrimSpace(plugin.URL) != ""
+			hasFile := strings.TrimSpace(plugin.File) != ""
+			switch {
+			case hasURL == hasFile:
+				errs = append(errs, fmt.Sprintf("services.kafkaConnect.plugins[%d] must define exactly one of url or file", i))
+			case hasURL:
+				// An unverified download would silently change what the worker runs.
+				if !sha256RE.MatchString(plugin.SHA256) {
+					errs = append(errs, fmt.Sprintf("services.kafkaConnect.plugins[%d].sha256 is required with url and must be 64 lowercase hex characters", i))
+				}
+			case hasFile:
+				if plugin.SHA256 != "" && !sha256RE.MatchString(plugin.SHA256) {
+					errs = append(errs, fmt.Sprintf("services.kafkaConnect.plugins[%d].sha256 must be 64 lowercase hex characters", i))
+				}
+				if filepath.IsAbs(plugin.File) {
+					errs = append(errs, fmt.Sprintf("services.kafkaConnect.plugins[%d].file must be relative to the stack file", i))
+				}
+			}
+			if hasURL || hasFile {
+				if _, err := PluginArtifactFormat(plugin); err != nil {
+					errs = append(errs, fmt.Sprintf("services.kafkaConnect.plugins[%d]: %v", i, err))
+				}
+			}
 		}
 		names := map[string]bool{}
 		for i, connector := range s.Services.KafkaConnect.Connectors {
@@ -1201,6 +1245,71 @@ func (s *Stack) KafkaUIImage() string {
 
 func (s *Stack) KafkaConnectInternalURL() string {
 	return fmt.Sprintf("http://kafka-connect.%s.svc.cluster.local:8083", s.Cluster.Namespace)
+}
+
+// PluginArtifactFormat reports how the installer unpacks an artifact: "zip",
+// "tar.gz", or "jar".
+func PluginArtifactFormat(plugin KafkaConnectPlugin) (string, error) {
+	name := plugin.File
+	if name == "" {
+		name = pluginURLPath(plugin.URL)
+	}
+	lower := strings.ToLower(name)
+	switch {
+	case strings.HasSuffix(lower, ".zip"):
+		return "zip", nil
+	case strings.HasSuffix(lower, ".tar.gz"), strings.HasSuffix(lower, ".tgz"):
+		return "tar.gz", nil
+	case strings.HasSuffix(lower, ".jar"):
+		return "jar", nil
+	default:
+		return "", fmt.Errorf("artifact %q must be a .zip, .tar.gz, .tgz, or .jar", name)
+	}
+}
+
+// PluginArtifactBase is the artifact file name, used to name the copy inside the
+// plugin directory and the Secret key for a local file.
+func PluginArtifactBase(plugin KafkaConnectPlugin) string {
+	if plugin.File != "" {
+		return path.Base(filepath.ToSlash(plugin.File))
+	}
+	return path.Base(pluginURLPath(plugin.URL))
+}
+
+// pluginURLPath strips the query and fragment so a signed or versioned download
+// URL still reveals the artifact extension.
+func pluginURLPath(raw string) string {
+	if parsed, err := url.Parse(raw); err == nil && parsed.Path != "" {
+		return parsed.Path
+	}
+	if index := strings.IndexAny(raw, "?#"); index >= 0 {
+		return raw[:index]
+	}
+	return raw
+}
+
+// KafkaConnectPluginDirs lists the distinct plugin directories, in declaration order.
+func (s *Stack) KafkaConnectPluginDirs() []string {
+	if s.Services.KafkaConnect == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	dirs := []string{}
+	for _, plugin := range s.Services.KafkaConnect.Plugins {
+		if seen[plugin.Name] {
+			continue
+		}
+		seen[plugin.Name] = true
+		dirs = append(dirs, plugin.Name)
+	}
+	return dirs
+}
+
+func (s *Stack) KafkaConnectPlugins() []KafkaConnectPlugin {
+	if s.Services.KafkaConnect == nil {
+		return nil
+	}
+	return s.Services.KafkaConnect.Plugins
 }
 
 func (s *Stack) KafkaConnectConfigTopic() string {

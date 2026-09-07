@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pyahu/cli/internal/catalog"
+	"github.com/pyahu/cli/internal/connect"
 )
 
 func (a *app) newDescribeCmd() *cobra.Command {
@@ -30,6 +32,9 @@ func (a *app) newDescribeCmd() *cobra.Command {
 			if !ok {
 				return unknownServiceError()
 			}
+			if name == "kafka-connect" && snapshot.ClusterRunning {
+				a.addLoadedConnectPlugins(cmd.Context(), snapshot, &service)
+			}
 			if a.opts.output == "json" {
 				return writeJSON(a.opts.out, service)
 			}
@@ -39,6 +44,24 @@ func (a *app) newDescribeCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&showSecrets, "show-secrets", false, "show secret values in human output")
 	return cmd
+}
+
+// addLoadedConnectPlugins asks the running worker what it actually loaded. The
+// declared list says what should be there; only the worker says what is. A
+// worker that is still starting is not an error here — describe still prints
+// everything else.
+func (a *app) addLoadedConnectPlugins(ctx context.Context, snapshot serviceSnapshot, service *catalog.Service) {
+	stack := snapshot.Loaded.Data
+	plugins, err := connect.New(fmt.Sprintf("http://localhost:%d", stack.KafkaConnectPort())).Plugins(ctx)
+	if err != nil {
+		service.Details["pluginsLoaded"] = "unavailable: " + err.Error()
+		return
+	}
+	classes := make([]string, 0, len(plugins))
+	for _, plugin := range plugins {
+		classes = append(classes, plugin.Class)
+	}
+	service.Details["pluginsLoaded"] = strings.Join(classes, ", ")
 }
 
 func (a *app) renderDescribe(service catalog.Service, showSecrets bool) {

@@ -912,3 +912,91 @@ func assertEnv(t *testing.T, env map[string]string, key string, expected string)
 		t.Fatalf("%s = %q, want %q", key, env[key], expected)
 	}
 }
+
+func loadPluginStack(t *testing.T, pluginsYAML string) (*LoadedStack, error) {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  kafka:
+    enabled: true
+  kafkaConnect:
+    enabled: true
+    plugins:
+` + pluginsYAML)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return Load(path)
+}
+
+func TestLoadKafkaConnectPluginsAllowRepeatedNames(t *testing.T) {
+	loaded, err := loadPluginStack(t, `      - name: redis-kafka-connect
+        url: https://example.test/redis-kafka-connect-1.1.0.zip
+        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
+      - name: redis-kafka-connect
+        file: connect-plugins/router.jar
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stack := loaded.Data
+	if got := len(stack.KafkaConnectPlugins()); got != 2 {
+		t.Fatalf("plugins = %d", got)
+	}
+	// Same name means one directory, which is what puts the transform on the
+	// connector's classloader.
+	if dirs := stack.KafkaConnectPluginDirs(); len(dirs) != 1 || dirs[0] != "redis-kafka-connect" {
+		t.Fatalf("plugin dirs = %#v", dirs)
+	}
+}
+
+func TestLoadRejectsPluginURLWithoutSHA256(t *testing.T) {
+	_, err := loadPluginStack(t, `      - name: redis-kafka-connect
+        url: https://example.test/redis-kafka-connect-1.1.0.zip
+`)
+	if err == nil || !strings.Contains(err.Error(), "sha256 is required with url") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLoadRejectsPluginWithBothSources(t *testing.T) {
+	_, err := loadPluginStack(t, `      - name: router
+        url: https://example.test/router.jar
+        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
+        file: connect-plugins/router.jar
+`)
+	if err == nil || !strings.Contains(err.Error(), "exactly one of url or file") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLoadRejectsPluginWithNeitherSource(t *testing.T) {
+	_, err := loadPluginStack(t, `      - name: router
+`)
+	if err == nil || !strings.Contains(err.Error(), "exactly one of url or file") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLoadRejectsPluginWithUnsupportedArtifact(t *testing.T) {
+	_, err := loadPluginStack(t, `      - name: router
+        file: connect-plugins/router.tgz.bak
+`)
+	if err == nil || !strings.Contains(err.Error(), "must be a .zip, .tar.gz, .tgz, or .jar") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLoadRejectsAbsolutePluginFile(t *testing.T) {
+	_, err := loadPluginStack(t, `      - name: router
+        file: /opt/router.jar
+`)
+	if err == nil || !strings.Contains(err.Error(), "must be relative to the stack file") {
+		t.Fatalf("error = %v", err)
+	}
+}

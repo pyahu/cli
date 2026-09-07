@@ -373,6 +373,7 @@ func kafkaConnect(stack *schema.Stack, status kube.ServiceStatus, clusterRunning
 		details["offsetTopic"] = stack.KafkaConnectOffsetTopic()
 		details["statusTopic"] = stack.KafkaConnectStatusTopic()
 		details["connectors"] = kafkaConnectConnectors(stack.Services.KafkaConnect.Connectors)
+		details["plugins"] = kafkaConnectPlugins(stack.Services.KafkaConnect.Plugins)
 	}
 	return Service{
 		Name:        "kafka-connect",
@@ -514,6 +515,23 @@ func kafkaConnectConnectors(connectors []schema.KafkaConnectConnector) string {
 		names = append(names, fmt.Sprintf("%s(%s:%s)", connector.Name, connector.Type, connector.Kind))
 	}
 	return join(names)
+}
+
+// kafkaConnectPlugins renders the declared artifacts, keeping declaration order
+// so repeated names read as "these land in the same directory".
+func kafkaConnectPlugins(plugins []schema.KafkaConnectPlugin) string {
+	if len(plugins) == 0 {
+		return ""
+	}
+	values := make([]string, 0, len(plugins))
+	for _, plugin := range plugins {
+		source := plugin.URL
+		if source == "" {
+			source = plugin.File
+		}
+		values = append(values, fmt.Sprintf("%s(%s)", plugin.Name, source))
+	}
+	return strings.Join(values, ", ")
 }
 
 func join(values []string) string {

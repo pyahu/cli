@@ -85,6 +85,73 @@ Esse é o corpo enviado para:
 PUT /connectors/app-cdc/config
 ```
 
+## Plugins
+
+A imagem padrão `quay.io/debezium/connect` traz só o Debezium. Para qualquer outro
+connector — Redis Streams, JDBC, S3 — ou para uma SMT própria, declare os artefatos
+em `services.kafkaConnect.plugins`. A CLI instala cada um num diretório de plugin
+antes de o worker subir; não é preciso construir e publicar uma imagem.
+
+```yaml
+services:
+  kafkaConnect:
+    enabled: true
+    plugins:
+      - name: redis-kafka-connect
+        url: https://github.com/redis-field-engineering/redis-kafka-connect/releases/download/v1.1.0/redis-redis-kafka-connect-1.1.0.zip
+        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
+      - name: redis-kafka-connect        # mesmo nome = mesmo diretório
+        file: connect-plugins/meu-outbox-router.jar
+```
+
+| Campo | Regra |
+| --- | --- |
+| `name` | DNS label; é o nome do diretório de plugin. **Repetir o nome é permitido e tem significado.** |
+| `url` + `sha256` | Baixa e confere o hash. O `sha256` é **obrigatório** com `url`: download não verificado não é aceito. |
+| `file` | Caminho relativo ao diretório do `pyahu.yaml`, ≤ 1 MiB, guardado num Secret. Serve para o jar pequeno que ainda não tem URL pública. |
+
+Exatamente um de `url` ou `file` por entrada. O artefato precisa ser `.zip`,
+`.tar.gz`, `.tgz` ou `.jar`.
+
+### Por que dois artefatos podem dividir o mesmo `name`
+
+O Kafka Connect isola **cada diretório de plugin no seu próprio classloader**. Uma
+SMT que precisa enxergar as classes do connector (para ler o tipo de um campo do
+registro, por exemplo) tem que estar no **mesmo diretório** que ele — um jar solto
+em outro diretório não resolve, e a falha aparece como `ClassNotFoundException` só
+quando a task roda. Por isso repetir o `name` é a forma de dizer "estes artefatos
+vão juntos".
+
+### Como a instalação funciona
+
+Um initContainer `install-plugins` (`alpine:3.21`) roda antes do worker e, para
+cada plugin: baixa ou copia o artefato, confere o `sha256`, extrai `.zip`/`.tar.gz`
+e **achata todos os `*.jar` encontrados** em `/plugins/<name>/` — os zips de release
+guardam os jars debaixo de `lib/`, e o Connect só trata os filhos diretos de um
+diretório do `plugin.path` como plugin. Qualquer falha derruba o pod com uma
+mensagem que nomeia o plugin.
+
+O volume vai para `/kafka/connect-extra` no worker, que recebe
+`CONNECT_PLUGIN_PATH=/kafka/connect,/kafka/connect-extra` — os plugins da imagem
+continuam valendo.
+
+Mudou a lista de plugins, o pod é recriado: os artefatos são instalados no start
+do pod, então um pod intacto continuaria servindo o conjunto anterior.
+
+### Conferir o que o worker carregou
+
+```bash
+curl -s http://localhost:8083/connector-plugins | jq -r '.[].class'
+# transforms e converters só aparecem com connectorsOnly=false
+curl -s 'http://localhost:8083/connector-plugins?connectorsOnly=false' | jq -r '.[].class'
+
+pyahu describe kafka-connect      # declarados (plugins) e carregados (pluginsLoaded)
+```
+
+O Job que registra um connector espera essa classe aparecer em
+`/connector-plugins` antes de fazer o `PUT`. Isso separa "o plugin não foi
+instalado" de "o connector subiu e falhou".
+
 ## Sink custom
 
 Sink connectors também são JSON do Kafka Connect. A diferença é que o plugin do sink precisa existir na imagem usada por `services.kafkaConnect.image`.
@@ -193,4 +260,4 @@ https://kafka-ui.localhost
 - `kind: debezium.postgres` sempre é `type: source`.
 - `kind: custom` pode ser `type: source` ou `type: sink`.
 - Conectores custom exigem `config.connector.class`.
-- Plugins de sink não são instalados automaticamente. Use uma imagem de Kafka Connect que já contenha o plugin necessário.
+- Plugins que não vêm na imagem entram por `services.kafkaConnect.plugins`; alternativamente, use uma imagem que já contenha o plugin.

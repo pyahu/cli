@@ -516,6 +516,12 @@ services:
     ports:
       rest: 8083
     replicas: 1
+    plugins:
+      - name: redis-kafka-connect
+        url: https://github.com/redis-field-engineering/redis-kafka-connect/releases/download/v1.1.0/redis-redis-kafka-connect-1.1.0.zip
+        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
+      - name: redis-kafka-connect      # same name = same plugin directory
+        file: connect-plugins/my-outbox-router.jar
     connectors:
       - name: app-cdc
         type: source
@@ -557,6 +563,29 @@ Defaults:
 - connector `publication`: connector `name` with dashes converted to
   underscores plus `_publication`
 - connector `snapshotMode`: `initial`
+
+`plugins[]` installs artifacts into the worker's plugin directories before it
+starts, so a connector that does not ship with the image does not require
+building one:
+
+- `name` (required): DNS label, and the plugin directory. **Repeating a name is
+  allowed and meaningful** — Kafka Connect isolates each plugin directory in its
+  own classloader, so a transform that needs a connector's classes has to land in
+  the same directory as the connector.
+- `url` + `sha256`: download and verify. `sha256` is required with `url`.
+- `file`: path relative to the stack file directory, at most 1 MiB, carried in a
+  Secret. Meant for a small jar that has no public URL yet.
+- Exactly one of `url` or `file`. The artifact must be `.zip`, `.tar.gz`, `.tgz`,
+  or `.jar`.
+
+An `install-plugins` initContainer fetches or copies each artifact, verifies the
+hash, extracts archives, and flattens every `*.jar` it finds into
+`/plugins/<name>/`. The volume is mounted at `/kafka/connect-extra` on the worker,
+which runs with `CONNECT_PLUGIN_PATH=/kafka/connect,/kafka/connect-extra`.
+
+Before registering a connector, Pyahu waits for its `connector.class` to appear in
+`GET /connector-plugins?connectorsOnly=false`, so a missing plugin is reported as
+a missing plugin rather than as an unhealthy connector.
 
 Kafka Connect requires Kafka. Debezium PostgreSQL connectors also require
 PostgreSQL. V1 supports a declarative PostgreSQL Debezium source shortcut and

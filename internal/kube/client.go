@@ -97,7 +97,7 @@ func (c *Client) ApplyStack(ctx context.Context, stack *schema.Stack, stackDir s
 		}
 	}
 	if stack.KafkaConnectEnabled() {
-		if err := c.applyKafkaConnect(ctx, stack); err != nil {
+		if err := c.applyKafkaConnect(ctx, stack, stackDir); err != nil {
 			return err
 		}
 	}

@@ -85,6 +85,73 @@ This is the body sent to:
 PUT /connectors/app-cdc/config
 ```
 
+## Plugins
+
+The default `quay.io/debezium/connect` image ships only Debezium. For any other
+connector — Redis Streams, JDBC, S3 — or for your own SMT, declare the artifacts
+under `services.kafkaConnect.plugins`. The CLI installs each one into a plugin
+directory before the worker starts; there is no image to build and publish.
+
+```yaml
+services:
+  kafkaConnect:
+    enabled: true
+    plugins:
+      - name: redis-kafka-connect
+        url: https://github.com/redis-field-engineering/redis-kafka-connect/releases/download/v1.1.0/redis-redis-kafka-connect-1.1.0.zip
+        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
+      - name: redis-kafka-connect        # same name = same directory
+        file: connect-plugins/my-outbox-router.jar
+```
+
+| Field | Rule |
+| --- | --- |
+| `name` | DNS label; it is the plugin directory name. **Repeating a name is allowed and meaningful.** |
+| `url` + `sha256` | Downloads and verifies the hash. `sha256` is **required** with `url`: an unverified download is not accepted. |
+| `file` | Path relative to the `pyahu.yaml` directory, ≤ 1 MiB, stored in a Secret. Meant for a small jar that has no public URL yet. |
+
+Exactly one of `url` or `file` per entry. The artifact must be a `.zip`,
+`.tar.gz`, `.tgz`, or `.jar`.
+
+### Why two artifacts can share a `name`
+
+Kafka Connect isolates **each plugin directory in its own classloader**. A
+transform that needs the connector's classes (to read the type of a record field,
+say) has to sit in the **same directory** as the connector — a loose jar in
+another directory does not work, and the failure shows up as a
+`ClassNotFoundException` only when the task runs. Repeating the `name` is how you
+say "these artifacts belong together".
+
+### How installation works
+
+An `install-plugins` initContainer (`alpine:3.21`) runs before the worker and,
+for each plugin: fetches or copies the artifact, verifies `sha256`, extracts
+`.zip`/`.tar.gz`, and **flattens every `*.jar` it finds** into `/plugins/<name>/`
+— release archives nest jars under `lib/`, and Connect only treats the immediate
+children of a `plugin.path` entry as a plugin. Any failure fails the pod with a
+message that names the plugin.
+
+The volume is mounted at `/kafka/connect-extra` on the worker, which gets
+`CONNECT_PLUGIN_PATH=/kafka/connect,/kafka/connect-extra` — the image's own
+plugins still apply.
+
+Change the plugin list and the pod is recreated: artifacts are installed at pod
+start, so an untouched pod would keep serving the previous set.
+
+### Checking what the worker loaded
+
+```bash
+curl -s http://localhost:8083/connector-plugins | jq -r '.[].class'
+# transforms and converters only show up with connectorsOnly=false
+curl -s 'http://localhost:8083/connector-plugins?connectorsOnly=false' | jq -r '.[].class'
+
+pyahu describe kafka-connect      # declared (plugins) and loaded (pluginsLoaded)
+```
+
+The Job that registers a connector waits for that class to appear in
+`/connector-plugins` before issuing the `PUT`. That separates "the plugin was
+never installed" from "the connector started and failed".
+
 ## Custom sink
 
 Sink connectors are also Kafka Connect JSON. The difference is that the sink plugin must exist in the image used by `services.kafkaConnect.image`.
@@ -193,4 +260,4 @@ https://kafka-ui.localhost
 - `kind: debezium.postgres` is always `type: source`.
 - `kind: custom` can be `type: source` or `type: sink`.
 - Custom connectors require `config.connector.class`.
-- Sink plugins are not installed automatically. Use a Kafka Connect image that already contains the required plugin.
+- Plugins that do not ship with the image go in `services.kafkaConnect.plugins`; alternatively, use an image that already contains the plugin.

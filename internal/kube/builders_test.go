@@ -669,3 +669,193 @@ func TestRedisServiceUsesStableNodePort(t *testing.T) {
 		t.Fatalf("redis port = %d", got)
 	}
 }
+
+func testConnectPluginStack(t *testing.T, plugins ...schema.KafkaConnectPlugin) *schema.Stack {
+	t.Helper()
+	stack := testPlatformStack()
+	stack.Services.KafkaConnect = &schema.KafkaConnectService{Enabled: schema.Bool(true), Plugins: plugins}
+	stack.SetDefaults()
+	return stack
+}
+
+func TestKafkaConnectDeploymentInstallsDeclaredPlugins(t *testing.T) {
+	stack := testConnectPluginStack(t,
+		schema.KafkaConnectPlugin{Name: "redis-kafka-connect", URL: "https://example.test/redis-kafka-connect-1.1.0.zip", SHA256: strings.Repeat("a", 64)},
+		schema.KafkaConnectPlugin{Name: "redis-kafka-connect", File: "connect-plugins/router.jar"},
+	)
+
+	spec := kafkaConnectDeployment(stack, map[string]string{}, map[string]string{}).Spec.Template.Spec
+	if len(spec.InitContainers) != 1 {
+		t.Fatalf("init containers = %d", len(spec.InitContainers))
+	}
+	init := spec.InitContainers[0]
+	if init.Name != "install-plugins" || init.Image != "alpine:3.21" {
+		t.Fatalf("init container = %s/%s", init.Name, init.Image)
+	}
+	mounts := map[string]string{}
+	for _, mount := range init.VolumeMounts {
+		mounts[mount.Name] = mount.MountPath
+	}
+	if mounts["plugins"] != "/plugins" || mounts["plugin-files"] != "/plugin-files" {
+		t.Fatalf("init mounts = %#v", mounts)
+	}
+
+	volumes := map[string]corev1.Volume{}
+	for _, volume := range spec.Volumes {
+		volumes[volume.Name] = volume
+	}
+	if volumes["plugins"].EmptyDir == nil {
+		t.Fatalf("plugins volume = %#v", volumes["plugins"])
+	}
+	if got := volumes["plugin-files"].Secret.SecretName; got != kafkaConnectPluginFilesSecretName {
+		t.Fatalf("plugin-files secret = %q", got)
+	}
+
+	worker := spec.Containers[0]
+	if worker.VolumeMounts[0].Name != "plugins" || worker.VolumeMounts[0].MountPath != "/kafka/connect-extra" {
+		t.Fatalf("worker mounts = %#v", worker.VolumeMounts)
+	}
+	if got := containerEnv(worker.Env)["CONNECT_PLUGIN_PATH"]; got != "/kafka/connect,/kafka/connect-extra" {
+		t.Fatalf("CONNECT_PLUGIN_PATH = %q", got)
+	}
+	if spec.Containers[0].Image != stack.KafkaConnectImage() {
+		t.Fatalf("worker image = %q", spec.Containers[0].Image)
+	}
+}
+
+func TestKafkaConnectDeploymentStaysUntouchedWithoutPlugins(t *testing.T) {
+	stack := testConnectPluginStack(t)
+
+	spec := kafkaConnectDeployment(stack, map[string]string{}, map[string]string{}).Spec.Template.Spec
+	if len(spec.InitContainers) != 0 || len(spec.Volumes) != 0 {
+		t.Fatalf("expected no plugin plumbing: init=%d volumes=%d", len(spec.InitContainers), len(spec.Volumes))
+	}
+	if _, ok := containerEnv(spec.Containers[0].Env)["CONNECT_PLUGIN_PATH"]; ok {
+		t.Fatal("CONNECT_PLUGIN_PATH should only be set when plugins are declared")
+	}
+}
+
+func TestKafkaConnectDeploymentRollsWhenPluginSetChanges(t *testing.T) {
+	before := kafkaConnectDeployment(testConnectPluginStack(t,
+		schema.KafkaConnectPlugin{Name: "router", File: "connect-plugins/router.jar"},
+	), map[string]string{}, map[string]string{})
+	after := kafkaConnectDeployment(testConnectPluginStack(t,
+		schema.KafkaConnectPlugin{Name: "router", File: "connect-plugins/router-v2.jar"},
+	), map[string]string{}, map[string]string{})
+
+	key := "pyahu.io/kafka-connect-plugins-sha256"
+	if before.Spec.Template.Annotations[key] == "" {
+		t.Fatal("missing plugin checksum annotation")
+	}
+	if before.Spec.Template.Annotations[key] == after.Spec.Template.Annotations[key] {
+		t.Fatal("plugin checksum did not change with the plugin set")
+	}
+}
+
+func TestKafkaConnectPluginInstallScriptVerifiesAndFlattensJars(t *testing.T) {
+	stack := testConnectPluginStack(t,
+		schema.KafkaConnectPlugin{Name: "redis-kafka-connect", URL: "https://example.test/redis.zip", SHA256: strings.Repeat("b", 64)},
+		schema.KafkaConnectPlugin{Name: "redis-kafka-connect", File: "connect-plugins/router.jar"},
+	)
+	script := kafkaConnectPluginInstallScript(stack)
+
+	for _, want := range []string{
+		"wget -q -O $work/0 'https://example.test/redis.zip'",
+		strings.Repeat("b", 64) + "  $work/0\" | sha256sum -c -",
+		"unzip -q -o $work/0 -d $work/x0",
+		// Both artifacts land in the same directory: the transform needs the
+		// connector's classes on its classloader.
+		`find $work/x0 -name '*.jar' -type f -exec cp {} '/plugins/redis-kafka-connect'/ \;`,
+		"cp '/plugin-files/01-router-jar' $work/1",
+		"cp $work/1 '/plugins/redis-kafka-connect'/'router.jar'",
+	} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("install script does not contain %q:\n%s", want, script)
+		}
+	}
+}
+
+func TestKafkaConnectPluginInstallScriptUntarsArchives(t *testing.T) {
+	script := kafkaConnectPluginInstallScript(testConnectPluginStack(t,
+		schema.KafkaConnectPlugin{Name: "jdbc", URL: "https://example.test/jdbc.tar.gz?token=abc", SHA256: strings.Repeat("c", 64)},
+	))
+
+	if !strings.Contains(script, "tar -xzf $work/0 -C $work/x0") {
+		t.Fatalf("install script does not untar the artifact:\n%s", script)
+	}
+}
+
+func TestKafkaConnectPluginFilesRejectOversizedArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "big.jar"), make([]byte, kafkaConnectPluginFileLimit+1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stack := testConnectPluginStack(t, schema.KafkaConnectPlugin{Name: "router", File: "big.jar"})
+
+	_, err := kafkaConnectPluginFiles(stack, dir)
+	if err == nil || !strings.Contains(err.Error(), "the limit is 1 MiB") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestKafkaConnectPluginFilesKeepDistinctKeysForRepeatedBaseNames(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "a"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "b"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a", "router.jar"), []byte("one"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b", "router.jar"), []byte("two"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stack := testConnectPluginStack(t,
+		schema.KafkaConnectPlugin{Name: "one", File: "a/router.jar"},
+		schema.KafkaConnectPlugin{Name: "two", File: "b/router.jar"},
+	)
+
+	files, err := kafkaConnectPluginFiles(stack, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 2 {
+		t.Fatalf("plugin files = %#v", files)
+	}
+	if string(files["00-router-jar"]) != "one" || string(files["01-router-jar"]) != "two" {
+		t.Fatalf("plugin files = %#v", files)
+	}
+}
+
+func TestKafkaConnectConnectorJobWaitsForThePluginClass(t *testing.T) {
+	stack := testConnectPluginStack(t)
+	connector := schema.KafkaConnectConnector{
+		Name: "checkout-outbox",
+		Kind: "custom",
+		Type: "source",
+		Config: map[string]string{
+			"connector.class": "com.redis.kafka.connect.RedisStreamSourceConnector",
+		},
+	}
+	payload, err := kafkaConnectConnectorPayload(stack, connector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := strings.Join(kafkaConnectConnectorJob(stack, connector, "secret", payload).Spec.Template.Spec.Containers[0].Args, "\n")
+
+	for _, want := range []string{
+		"/connector-plugins?connectorsOnly=false",
+		`grep -q '"com.redis.kafka.connect.RedisStreamSourceConnector"'`,
+		"check services.kafkaConnect.plugins",
+	} {
+		if !strings.Contains(args, want) {
+			t.Fatalf("connector job script does not contain %q:\n%s", want, args)
+		}
+	}
+	// The plugin wait must come before the registration call.
+	if strings.Index(args, "connector-plugins") > strings.Index(args, "-X PUT") {
+		t.Fatalf("plugin wait runs after registration:\n%s", args)
+	}
+}
