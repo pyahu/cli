@@ -442,9 +442,10 @@ pyahu certs status --output json
 When a newer release exists, the CLI prints a notice at the end of any command:
 
 ```text
-⚠ pyahu 0.4.0 is out of date — 0.6.1 is available
+⚠ pyahu 0.4.0 is out of date — 0.7.0 is available
+  pyahu upgrade
   curl -fsSL https://cli.pyahu.io/install.sh | sh
-  https://github.com/pyahu/cli/releases/tag/v0.6.1
+  https://github.com/pyahu/cli/releases/tag/v0.7.0
   silence this with PYAHU_NO_UPDATE_CHECK=1
 ```
 
@@ -467,6 +468,56 @@ It stays silent when:
 The lookup runs **alongside** the command and the answer is cached for 24h in
 `<config dir>/pyahu/version-check.json`, so it costs no wall-clock time: the command never waits
 more than 700ms for it, and the next day the answer is already on disk.
+
+### `pyahu check-update`
+
+Asks the releases endpoint directly — it does not go through the 24h cache behind the passive notice.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--exit-code` | `false` | Exit 1 when a newer release is available (for scripts/CI). |
+
+```bash
+pyahu check-update
+pyahu check-update --output json      # {"current":"0.4.0","latest":"0.7.0","outdated":true}
+pyahu check-update --exit-code        # 0 = up to date, 1 = a newer release exists
+```
+
+It exits **0** by default even when behind: being out of date is not a command failure. Anyone who
+wants to fail a pipeline over it asks for `--exit-code`, in the spirit of `git diff --exit-code`.
+
+### `pyahu upgrade`
+
+Downloads the release, **verifies its SHA-256** against the published `checksums.txt`, and swaps
+this binary for the one inside the archive.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--yes` | `false` | Replace without prompting. |
+| `--version` | *(latest)* | Install a specific version — this is also how you roll back. |
+
+```bash
+pyahu upgrade
+pyahu upgrade --yes
+pyahu upgrade --yes --version v0.6.1   # downgrade
+```
+
+The new binary is written next to the current one and renamed over it: the swap is atomic on the
+same filesystem, and an interrupted download never leaves a half-written binary. On Unix the running
+process stays on the old inode, so `upgrade` itself finishes normally.
+
+:::caution[A binary owned by another tool is left alone]
+If this `pyahu` came from **mise** or `go install`, the command refuses and prints the right
+instruction — replacing the file there would be undone by the next `mise install`:
+
+```text
+error: this pyahu is managed by another tool; upgrade it with: mise use github:pyahu/cli@0.7.0
+```
+:::
+
+The other refusals, all before downloading anything: a locally built binary (version `dev`), Windows
+(a running executable cannot be replaced under it), and an install directory that is not writable —
+there the message already carries both ways out (`sudo`, or reinstall into `~/.local/bin`).
 
 ## Recommended flow
 

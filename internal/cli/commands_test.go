@@ -885,3 +885,163 @@ func TestUpgradeNoticeIsSilentWhenUpToDate(t *testing.T) {
 		t.Fatalf("expected silence, got stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
 }
+
+func upgradeApp(t *testing.T, version string, latest string, replaced *[]byte) func(*app) {
+	t.Helper()
+	return func(a *app) {
+		a.opts.version = version
+		a.deps.latestRelease = func(context.Context) (string, error) { return latest, nil }
+		a.deps.downloadRelease = func(context.Context, update.Release) ([]byte, error) {
+			return []byte("new binary"), nil
+		}
+		a.deps.replaceBinary = func(path string, binary []byte) error {
+			if replaced != nil {
+				*replaced = binary
+			}
+			return nil
+		}
+	}
+}
+
+func TestCheckUpdateReportsOutdatedAsJSON(t *testing.T) {
+	stdout, _, err := executeTestCommand(t, upgradeApp(t, "0.4.0", "0.7.0", nil), "check-update", "--output", "json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Current  string `json:"current"`
+		Latest   string `json:"latest"`
+		Outdated bool   `json:"outdated"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Current != "0.4.0" || got.Latest != "0.7.0" || !got.Outdated {
+		t.Fatalf("check-update = %#v", got)
+	}
+}
+
+func TestCheckUpdateExitsZeroUnlessAskedOtherwise(t *testing.T) {
+	// Being behind is not a command failure, so the default exit stays 0.
+	if _, _, err := executeTestCommand(t, upgradeApp(t, "0.4.0", "0.7.0", nil), "check-update"); err != nil {
+		t.Fatalf("default exit should be 0: %v", err)
+	}
+	_, _, err := executeTestCommand(t, upgradeApp(t, "0.4.0", "0.7.0", nil), "check-update", "--exit-code")
+	if err == nil {
+		t.Fatal("--exit-code should fail when a release is available")
+	}
+	if code := exitCode(err); code != 1 {
+		t.Fatalf("exit code = %d", code)
+	}
+}
+
+func TestCheckUpdateSaysWhenCurrent(t *testing.T) {
+	stdout, _, err := executeTestCommand(t, upgradeApp(t, "0.7.0", "0.7.0", nil), "check-update", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout, "pyahu 0.7.0 is the latest release") {
+		t.Fatalf("stdout:\n%s", stdout)
+	}
+}
+
+func TestUpgradeReplacesTheBinary(t *testing.T) {
+	var replaced []byte
+	stdout, _, err := executeTestCommand(t, upgradeApp(t, "0.4.0", "0.7.0", &replaced), "upgrade", "--yes", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(replaced) != "new binary" {
+		t.Fatalf("replaced with %q", replaced)
+	}
+	if !strings.Contains(stdout, "pyahu 0.7.0 installed") {
+		t.Fatalf("stdout:\n%s", stdout)
+	}
+}
+
+func TestUpgradeIsANoOpWhenCurrent(t *testing.T) {
+	var replaced []byte
+	stdout, _, err := executeTestCommand(t, upgradeApp(t, "0.7.0", "0.7.0", &replaced), "upgrade", "--yes", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replaced != nil {
+		t.Fatal("an up-to-date binary must not be replaced")
+	}
+	if !strings.Contains(stdout, "already the latest release") {
+		t.Fatalf("stdout:\n%s", stdout)
+	}
+}
+
+func TestUpgradeRefusesWithoutConfirmation(t *testing.T) {
+	var replaced []byte
+	// --no-input means nobody is there to answer; replacing the binary anyway
+	// would be a surprise edit to the user's machine.
+	_, _, err := executeTestCommand(t, upgradeApp(t, "0.4.0", "0.7.0", &replaced), "upgrade", "--no-input")
+	if err == nil || !strings.Contains(err.Error(), "requires --yes") {
+		t.Fatalf("error = %v", err)
+	}
+	if replaced != nil {
+		t.Fatal("the binary must not be replaced without confirmation")
+	}
+}
+
+func TestUpgradeInstallsAPinnedVersion(t *testing.T) {
+	var replaced []byte
+	mutate := func(a *app) {
+		upgradeApp(t, "0.7.0", "0.7.0", &replaced)(a)
+		// A pinned version must not consult the releases endpoint at all, so a
+		// downgrade works even when the lookup would say "you are current".
+		a.deps.latestRelease = func(context.Context) (string, error) {
+			t.Error("--version must not need the releases endpoint")
+			return "", nil
+		}
+		a.deps.downloadRelease = func(_ context.Context, release update.Release) ([]byte, error) {
+			if release.Version != "0.5.0" {
+				t.Errorf("release version = %q, want 0.5.0", release.Version)
+			}
+			return []byte("pinned binary"), nil
+		}
+	}
+
+	if _, _, err := executeTestCommand(t, mutate, "upgrade", "--yes", "--version", "v0.5.0", "--no-color"); err != nil {
+		t.Fatal(err)
+	}
+	if string(replaced) != "pinned binary" {
+		t.Fatalf("replaced with %q", replaced)
+	}
+}
+
+func TestUpgradeLeavesAManagedBinaryAlone(t *testing.T) {
+	// The real binary under test lives in the Go test cache, so point GOPATH at
+	// it to make DetectManager see a `go install` binary.
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GOBIN", filepath.Dir(executable))
+	t.Setenv("GOPATH", "")
+
+	var replaced []byte
+	_, _, err = executeTestCommand(t, upgradeApp(t, "0.4.0", "0.7.0", &replaced), "upgrade", "--yes")
+	if err == nil || !strings.Contains(err.Error(), "managed by another tool") {
+		t.Fatalf("error = %v", err)
+	}
+	if !strings.Contains(err.Error(), "go install github.com/pyahu/cli/cmd/pyahu@latest") {
+		t.Fatalf("the message must name the command to run: %v", err)
+	}
+	if replaced != nil {
+		t.Fatal("a binary owned by another tool must never be replaced")
+	}
+}
+
+func TestUpgradeRefusesOnADevBuild(t *testing.T) {
+	var replaced []byte
+	_, _, err := executeTestCommand(t, upgradeApp(t, "dev", "0.7.0", &replaced), "upgrade", "--yes")
+	if err == nil || !strings.Contains(err.Error(), "locally built binary") {
+		t.Fatalf("error = %v", err)
+	}
+	if replaced != nil {
+		t.Fatal("a dev build must not be replaced")
+	}
+}

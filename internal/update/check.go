@@ -97,6 +97,18 @@ func Enabled(current string) bool {
 	return parse(current) != nil
 }
 
+// Latest asks the releases endpoint directly and refreshes the cache. The
+// passive notice reads through the cache; `pyahu check-update` uses this,
+// because a check the user asked for should not answer from yesterday.
+func (c *Checker) Latest(ctx context.Context) (string, error) {
+	latest, err := c.fetch(ctx)
+	if err != nil {
+		return "", err
+	}
+	c.writeCache(latest)
+	return normalize(latest), nil
+}
+
 // latest answers from the cache while it is fresh, and otherwise asks GitHub and
 // refreshes the cache.
 func (c *Checker) latest(ctx context.Context) (string, error) {

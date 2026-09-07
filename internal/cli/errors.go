@@ -8,6 +8,9 @@ import (
 type codedError struct {
 	code int
 	msg  string
+	// guided marks a message that already names the command to run, so the
+	// generic hint for the exit code is not appended on top of it.
+	guided bool
 }
 
 func (e codedError) Error() string {
@@ -16,6 +19,11 @@ func (e codedError) Error() string {
 
 func usageError(msg string) error {
 	return codedError{code: 2, msg: msg}
+}
+
+// guidedError is a usage-class error whose message already carries the fix.
+func guidedError(msg string) error {
+	return codedError{code: 2, msg: msg, guided: true}
 }
 
 func dependencyError(msg string) error {
@@ -45,6 +53,9 @@ func exitCode(err error) int {
 func errorHint(err error) string {
 	var coded codedError
 	errors.As(err, &coded)
+	if coded.guided {
+		return ""
+	}
 	switch exitCode(err) {
 	case 2:
 		if strings.HasPrefix(coded.msg, "--") || strings.Contains(coded.msg, "--format") {

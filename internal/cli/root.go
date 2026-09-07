@@ -40,6 +40,8 @@ func (a *app) newRootCmd() *cobra.Command {
 	root.AddCommand(a.newRestoreCmd())
 	root.AddCommand(a.newConnectorsCmd())
 	root.AddCommand(a.newKubeconfigCmd())
+	root.AddCommand(a.newCheckUpdateCmd())
+	root.AddCommand(a.newUpgradeCmd())
 	root.AddCommand(a.newCompletionCmd())
 	return root
 }

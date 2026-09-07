@@ -19,7 +19,7 @@ const upgradeNoticeWait = 700 * time.Millisecond
 // `--output json` consume stdout, and a banner there would be evaluated as
 // shell or break the JSON.
 func (a *app) printUpgradeNotice(check func(time.Duration) (update.Result, bool)) {
-	if check == nil || a.opts.quiet || a.opts.output != "human" {
+	if check == nil || a.noticeHandled || a.opts.quiet || a.opts.output != "human" {
 		return
 	}
 	result, ok := check(upgradeNoticeWait)

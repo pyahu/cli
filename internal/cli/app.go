@@ -23,6 +23,11 @@ type app struct {
 	opts options
 	deps dependencies
 
+	// noticeHandled is set by the commands that already reported the version
+	// themselves, so the passive notice does not repeat them — or, after an
+	// upgrade, announce the version that was just replaced.
+	noticeHandled bool
+
 	colorOnce sync.Once
 	colorVal  bool
 	ttyVal    bool
@@ -50,6 +55,10 @@ type dependencies struct {
 	runDoctor     func(ctx context.Context, stack *schema.Stack, clusterExists bool) []doctor.Check
 	clusterExists func(ctx context.Context, stack *schema.Stack) bool
 	readFile      func(path string) ([]byte, error)
+
+	latestRelease   func(ctx context.Context) (string, error)
+	downloadRelease func(ctx context.Context, release update.Release) ([]byte, error)
+	replaceBinary   func(path string, binary []byte) error
 }
 
 type localRuntime interface {
@@ -124,6 +133,13 @@ func newApp(version string, commit string, date string, out io.Writer, err io.Wr
 			runDoctor:     doctor.Run,
 			clusterExists: doctor.ClusterExists,
 			readFile:      os.ReadFile,
+			latestRelease: func(ctx context.Context) (string, error) {
+				return update.New().Latest(ctx)
+			},
+			downloadRelease: func(ctx context.Context, release update.Release) ([]byte, error) {
+				return update.NewDownloader().Binary(ctx, release)
+			},
+			replaceBinary: update.Replace,
 		},
 	}
 }

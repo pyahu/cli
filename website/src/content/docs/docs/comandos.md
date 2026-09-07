@@ -441,9 +441,10 @@ pyahu certs status --output json
 Quando existe uma release mais nova, a CLI imprime um aviso ao fim de qualquer comando:
 
 ```text
-⚠ pyahu 0.4.0 is out of date — 0.6.1 is available
+⚠ pyahu 0.4.0 is out of date — 0.7.0 is available
+  pyahu upgrade
   curl -fsSL https://cli.pyahu.io/install.sh | sh
-  https://github.com/pyahu/cli/releases/tag/v0.6.1
+  https://github.com/pyahu/cli/releases/tag/v0.7.0
   silence this with PYAHU_NO_UPDATE_CHECK=1
 ```
 
@@ -466,6 +467,56 @@ Ele não aparece quando:
 A consulta roda **em paralelo** ao comando e a resposta fica em cache por 24h em
 `<dir de config>/pyahu/version-check.json`, então ela não custa tempo de parede: o comando nunca
 espera mais que 700 ms por ela, e no dia seguinte a resposta já está no disco.
+
+### `pyahu check-update`
+
+Consulta o endpoint de releases na hora — sem passar pelo cache de 24h do aviso passivo.
+
+| Flag | Padrão | Descrição |
+| --- | --- | --- |
+| `--exit-code` | `false` | Sai com 1 quando há release mais nova (para script/CI). |
+
+```bash
+pyahu check-update
+pyahu check-update --output json      # {"current":"0.4.0","latest":"0.7.0","outdated":true}
+pyahu check-update --exit-code        # 0 = atualizado, 1 = há release nova
+```
+
+Por padrão sai **0** mesmo estando desatualizado: estar atrás não é falha de comando. Quem quer
+quebrar o pipeline por isso pede `--exit-code`, no mesmo espírito do `git diff --exit-code`.
+
+### `pyahu upgrade`
+
+Baixa a release, **confere o SHA-256** contra o `checksums.txt` publicado e troca este binário pelo
+que vem dentro do arquivo.
+
+| Flag | Padrão | Descrição |
+| --- | --- | --- |
+| `--yes` | `false` | Troca sem perguntar. |
+| `--version` | *(a mais nova)* | Instala uma versão específica — serve para voltar atrás. |
+
+```bash
+pyahu upgrade
+pyahu upgrade --yes
+pyahu upgrade --yes --version v0.6.1   # downgrade
+```
+
+O binário novo é escrito ao lado do atual e renomeado por cima: a troca é atômica no mesmo sistema
+de arquivos, e um download interrompido nunca deixa um binário pela metade. No Unix o processo em
+execução continua no inode antigo, então o próprio `upgrade` termina normalmente.
+
+:::caution[Binário gerenciado por outra ferramenta não é trocado]
+Se o `pyahu` veio do **mise** ou de um `go install`, o comando recusa e mostra a instrução certa —
+substituir o arquivo ali seria desfeito no próximo `mise install`:
+
+```text
+error: this pyahu is managed by another tool; upgrade it with: mise use github:pyahu/cli@0.7.0
+```
+:::
+
+Outras recusas, todas antes de baixar qualquer coisa: binário compilado localmente (versão `dev`),
+Windows (não dá para substituir um executável em execução), e diretório sem permissão de escrita —
+neste caso a mensagem já traz as duas saídas (`sudo`, ou reinstalar em `~/.local/bin`).
 
 ## Fluxo recomendado
 

@@ -67,6 +67,8 @@ depends = ["build"]
 run = [
   "./bin/pyahu --help >/dev/null",
   "./bin/pyahu backup --help >/dev/null",
+  "./bin/pyahu check-update --help >/dev/null",
+  "./bin/pyahu upgrade --help >/dev/null",
   "./bin/pyahu restore --help >/dev/null",
   "root=$PWD && tmp=$(mktemp -d) && mkdir -p \"$tmp/config\" \"$tmp/project\" && printf 'services:\\n  zitadel:\\n    ports:\\n      http: 18081\\n' > \"$tmp/config/pyahu.yaml\" && cp examples/platform.yaml \"$tmp/project/pyahu.yaml\" && cd \"$tmp/project\" && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" env --format json >/dev/null && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" services >/dev/null && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" describe postgres >/dev/null",
   "./bin/pyahu completion bash >/dev/null",

@@ -13,19 +13,23 @@ func TestInstructionsFollowTheInstallMethod(t *testing.T) {
 	cases := []struct {
 		name       string
 		executable string
-		want       string
+		want       []string
 	}{
-		{"mise", "/home/dev/.local/share/mise/installs/github-pyahu-cli/0.4.0/pyahu", "mise use github:pyahu/cli@0.6.1"},
-		{"mise shim", "/home/dev/.local/share/mise/shims/pyahu", "mise use github:pyahu/cli@0.6.1"},
-		{"go install", "/home/dev/go/bin/pyahu", "go install github.com/pyahu/cli/cmd/pyahu@latest"},
-		{"install script", "/usr/local/bin/pyahu", "curl -fsSL https://cli.pyahu.io/install.sh | sh"},
-		{"unknown", "", "curl -fsSL https://cli.pyahu.io/install.sh | sh"},
+		// A binary another tool owns gets that tool's command, and only it:
+		// `pyahu upgrade` would be undone by the next `mise install`.
+		{"mise", "/home/dev/.local/share/mise/installs/github-pyahu-cli/0.4.0/pyahu", []string{"mise use github:pyahu/cli@0.6.1"}},
+		{"mise shim", "/home/dev/.local/share/mise/shims/pyahu", []string{"mise use github:pyahu/cli@0.6.1"}},
+		{"go install", "/home/dev/go/bin/pyahu", []string{"go install github.com/pyahu/cli/cmd/pyahu@latest"}},
+		// A standalone binary can upgrade itself; the install script stays as the
+		// fallback for when the install directory is not writable.
+		{"install script", "/usr/local/bin/pyahu", []string{"pyahu upgrade", "curl -fsSL https://cli.pyahu.io/install.sh | sh"}},
+		{"unknown", "", []string{"pyahu upgrade", "curl -fsSL https://cli.pyahu.io/install.sh | sh"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := Instructions(tc.executable, "v0.6.1")
-			if len(got) != 1 || got[0] != tc.want {
-				t.Fatalf("Instructions(%q) = %#v, want [%q]", tc.executable, got, tc.want)
+			if strings.Join(got, "\n") != strings.Join(tc.want, "\n") {
+				t.Fatalf("Instructions(%q) = %#v, want %#v", tc.executable, got, tc.want)
 			}
 		})
 	}
