@@ -289,6 +289,80 @@ Origens `s3://` usam `aws s3 cp` no host.
 
 ---
 
+## Connectors
+
+### `pyahu connectors apply`
+
+Registra os connectors declarados em `services.kafkaConnect.connectors` e espera
+as tasks ficarem `RUNNING`.
+
+Rode depois que a aplicação dona da fonte do connector tiver subido pelo menos uma
+vez: um connector de outbox lê uma tabela, uma publication ou um stream que **não
+existe** num cluster novo. O comando é idempotente — reaplica o Secret e recria o
+Job de registro.
+
+| Flag | Padrão | Descrição |
+| --- | --- | --- |
+| `--name` | *(todos)* | Aplica só o connector com esse nome. |
+
+```bash
+pyahu connectors apply
+pyahu connectors apply --name checkout-outbox
+```
+
+### `pyahu connectors status`
+
+Mostra o estado de cada connector **e de cada task**.
+
+| Flag | Padrão | Descrição |
+| --- | --- | --- |
+| `--format` | `human` | `human` ou `json`. |
+
+```bash
+pyahu connectors status
+pyahu connectors status --format json
+```
+
+```text
+CONNECTOR            TASK  STATE    DETAIL
+allpick-core-outbox  -     RUNNING  source
+                     0     RUNNING  -
+checkout-outbox      -     RUNNING  source
+                     0     FAILED   ERR no such key
+```
+
+O comando sai com código ≠ 0 quando **qualquer task** não está `RUNNING` ou
+quando um connector está sem tasks.
+
+:::caution[Olhar só o estado do connector esconde a parada]
+Um connector fica `RUNNING` enquanto a sua única task está `FAILED` — é o caso do
+`checkout-outbox` acima. Alarme no estado do connector não pega isso; por task,
+pega. É por isso que a linha da task é a informação principal desta tabela.
+:::
+
+### `connectors[].optional`
+
+Um connector cuja fonte só existe depois de a aplicação subir leva `optional: true`:
+
+```yaml
+services:
+  kafkaConnect:
+    connectors:
+      - name: checkout-outbox
+        kind: custom
+        optional: true
+        config:
+          connector.class: com.redis.kafka.connect.RedisStreamSourceConnector
+```
+
+Com `optional: true`, um registro que não fica saudável durante o `pyahu up` vira
+**aviso** no sumário, não erro — o `up` continua verde e você roda
+`pyahu connectors apply` depois do primeiro boot. Sem `optional`, a falha derruba
+o `up`, que é o comportamento certo para um connector cuja fonte já deveria
+existir.
+
+---
+
 ## TLS local
 
 ### `pyahu certs status`

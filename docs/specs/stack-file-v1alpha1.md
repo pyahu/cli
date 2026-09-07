@@ -552,8 +552,9 @@ Defaults:
 - `version`: Pyahu default Debezium Connect stable version
 - `ports.rest`: `8083`
 - `replicas`: `1`
-- connector `type`: `source` for `kind: debezium.postgres`; required for
-  custom connectors and must be `source` or `sink`
+- connector `type`: `source`, for every kind; an explicit value must be
+  `source` or `sink`
+- connector `optional`: `false`
 - connector `kind`: `custom` when `config.connector.class` is set, otherwise
   `debezium.postgres`
 - connector `database`: first configured PostgreSQL database
@@ -586,6 +587,17 @@ which runs with `CONNECT_PLUGIN_PATH=/kafka/connect,/kafka/connect-extra`.
 Before registering a connector, Pyahu waits for its `connector.class` to appear in
 `GET /connector-plugins?connectorsOnly=false`, so a missing plugin is reported as
 a missing plugin rather than as an unhealthy connector.
+
+`connectors[].optional: true` marks a connector whose source — a table, a
+publication, a stream — only exists after the application has booted once. A
+registration that does not become healthy during `pyahu up` is reported as a
+warning in the summary instead of failing the command; `pyahu connectors apply`
+registers it afterwards. Non-optional connectors keep failing `up`.
+
+`pyahu connectors status` reports the connector state **and each task state**, and
+exits non-zero when any task is not `RUNNING` or a connector has no tasks: a
+connector stays `RUNNING` while its only task is `FAILED`, and that silent stop is
+what connector-level checks miss.
 
 Kafka Connect requires Kafka. Debezium PostgreSQL connectors also require
 PostgreSQL. V1 supports a declarative PostgreSQL Debezium source shortcut and

@@ -74,7 +74,7 @@ func checkMark(check doctor.Check) string {
 	return "ok"
 }
 
-func (a *app) printSummary(stack *schema.Stack, kubeconfig string) error {
+func (a *app) printSummary(stack *schema.Stack, kubeconfig string, warnings []string) error {
 	if a.opts.output == "json" {
 		return writeJSON(a.opts.out, map[string]any{
 			"cluster":    stack.Cluster.Name,
@@ -82,11 +82,15 @@ func (a *app) printSummary(stack *schema.Stack, kubeconfig string) error {
 			"kubeconfig": kubeconfig,
 			"services":   stack.EnabledServices(),
 			"env":        stack.ConnectionEnv(),
+			"warnings":   warnings,
 		})
 	}
 	s := a.styler()
 	a.info("")
 	a.info("%s %s", s.green(iconOK), s.ok("Pyahu local stack is ready"))
+	for _, warning := range warnings {
+		a.info("%s %s", s.yellow(iconWarn), s.yellow(warning))
+	}
 	a.info("%s%s", a.field("cluster:", 12, s.dim), stack.Cluster.Name)
 	a.info("%s%s", a.field("namespace:", 12, s.dim), stack.Cluster.Namespace)
 	a.info("%s%s", a.field("kubeconfig:", 12, s.dim), kubeconfig)

@@ -289,6 +289,81 @@ asks for confirmation; in scripts, with `--no-input`, or with non-human output, 
 
 ---
 
+## Connectors
+
+### `pyahu connectors apply`
+
+Registers the connectors declared under `services.kafkaConnect.connectors` and
+waits for their tasks to reach `RUNNING`.
+
+Run it after the application that owns a connector's source has booted at least
+once: an outbox connector reads a table, publication, or stream that does **not
+exist** on a fresh cluster. The command is idempotent — it re-applies the Secret
+and recreates the registration Job.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--name` | *(all)* | Apply only the connector with this name. |
+
+```bash
+pyahu connectors apply
+pyahu connectors apply --name checkout-outbox
+```
+
+### `pyahu connectors status`
+
+Shows the state of each connector **and of each task**.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--format` | `human` | `human` or `json`. |
+
+```bash
+pyahu connectors status
+pyahu connectors status --format json
+```
+
+```text
+CONNECTOR            TASK  STATE    DETAIL
+allpick-core-outbox  -     RUNNING  source
+                     0     RUNNING  -
+checkout-outbox      -     RUNNING  source
+                     0     FAILED   ERR no such key
+```
+
+The command exits non-zero when **any task** is not `RUNNING`, or when a
+connector has no tasks at all.
+
+:::caution[Watching only the connector state hides the stop]
+A connector stays `RUNNING` while its only task is `FAILED` — that is
+`checkout-outbox` above. Alerting on the connector state misses it; alerting per
+task does not. That is why the task row is the main information in this table.
+:::
+
+### `connectors[].optional`
+
+A connector whose source only exists after the application boots carries
+`optional: true`:
+
+```yaml
+services:
+  kafkaConnect:
+    connectors:
+      - name: checkout-outbox
+        kind: custom
+        optional: true
+        config:
+          connector.class: com.redis.kafka.connect.RedisStreamSourceConnector
+```
+
+With `optional: true`, a registration that does not become healthy during
+`pyahu up` is reported as a **warning** in the summary instead of an error — `up`
+stays green and you run `pyahu connectors apply` after the first boot. Without
+`optional`, the failure fails `up`, which is the right behavior for a connector
+whose source should already exist.
+
+---
+
 ## Local TLS
 
 ### `pyahu certs status`

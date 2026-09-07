@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pyahu/cli/pkg/schema"
 )
 
 func TestLoadPlatformPreset(t *testing.T) {
@@ -546,7 +548,41 @@ services:
 	}
 }
 
-func TestLoadRejectsCustomConnectorWithoutType(t *testing.T) {
+func TestCustomConnectorDefaultsToSourceType(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  kafka:
+    enabled: true
+  kafkaConnect:
+    enabled: true
+    connectors:
+      - name: app-source
+        config:
+          connector.class: io.example.SourceConnector
+`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	connector := loaded.Data.Services.KafkaConnect.Connectors[0]
+	if connector.Kind != "custom" || connector.Type != "source" {
+		t.Fatalf("connector kind/type = %s/%s", connector.Kind, connector.Type)
+	}
+	if schema.ConnectorOptional(connector) {
+		t.Fatal("optional should default to false")
+	}
+}
+
+func TestLoadRejectsConnectorWithUnsupportedType(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "pyahu.yaml")
 	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
@@ -560,6 +596,7 @@ services:
     enabled: true
     connectors:
       - name: app-sink
+        type: transform
         config:
           connector.class: io.example.SinkConnector
 `)
@@ -573,6 +610,38 @@ services:
 	}
 	if !strings.Contains(err.Error(), "type must be source or sink") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestOptionalConnectorIsMarkedOptional(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pyahu.yaml")
+	data := []byte(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  kafka:
+    enabled: true
+  kafkaConnect:
+    enabled: true
+    connectors:
+      - name: checkout-outbox
+        kind: custom
+        optional: true
+        config:
+          connector.class: com.redis.kafka.connect.RedisStreamSourceConnector
+`)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !schema.ConnectorOptional(loaded.Data.Services.KafkaConnect.Connectors[0]) {
+		t.Fatal("connector should be optional")
 	}
 }
 

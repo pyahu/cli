@@ -96,9 +96,12 @@ func (a *app) newUpCmd() *cobra.Command {
 				return err
 			}
 
+			var warnings []string
 			if !skipWait {
 				if err := a.phase("Aguardando os serviços ficarem prontos", func() (string, error) {
-					if err := client.WaitForStack(ctx, stack); err != nil {
+					collected, err := client.WaitForStack(ctx, stack)
+					warnings = collected
+					if err != nil {
 						return "", readinessError(err.Error())
 					}
 					return "", nil
@@ -117,7 +120,7 @@ func (a *app) newUpCmd() *cobra.Command {
 				}
 			}
 			a.printLocalTLSHint(stack, loaded.Dir)
-			return a.printSummary(stack, kubeconfig)
+			return a.printSummary(stack, kubeconfig, warnings)
 		},
 	}
 	cmd.Flags().BoolVar(&skipWait, "skip-wait", false, "apply resources without waiting for readiness")

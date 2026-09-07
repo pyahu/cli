@@ -5,9 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -567,13 +572,20 @@ type fakeKube struct {
 	statuses    []kube.ServiceStatus
 	backupData  string
 	restoreSink *bytes.Buffer
+	warnings    []string
 }
 
 func (k fakeKube) WaitForAPI(ctx context.Context, timeout time.Duration) error { return nil }
 func (k fakeKube) ApplyStack(ctx context.Context, stack *schema.Stack, stackDir string) error {
 	return nil
 }
-func (k fakeKube) WaitForStack(ctx context.Context, stack *schema.Stack) error      { return nil }
+func (k fakeKube) WaitForStack(ctx context.Context, stack *schema.Stack) ([]string, error) {
+	return k.warnings, nil
+}
+
+func (k fakeKube) ApplyConnectors(ctx context.Context, stack *schema.Stack, name string) error {
+	return nil
+}
 func (k fakeKube) CaptureZitadelPAT(ctx context.Context, stack *schema.Stack) error { return nil }
 func (k fakeKube) DeleteNamespace(ctx context.Context, namespace string) error      { return nil }
 func (k fakeKube) Status(ctx context.Context, stack *schema.Stack) ([]kube.ServiceStatus, error) {
@@ -593,4 +605,217 @@ func (k fakeKube) RestorePostgres(ctx context.Context, stack *schema.Stack, data
 	}
 	_, err := io.Copy(k.restoreSink, in)
 	return err
+}
+
+// connectStatusJSON is the shape of GET /connectors?expand=status.
+const connectStatusJSON = `{
+  "allpick-core-outbox": {
+    "status": {
+      "name": "allpick-core-outbox",
+      "type": "source",
+      "connector": {"state": "RUNNING", "worker_id": "kafka-connect:8083"},
+      "tasks": [{"id": 0, "state": "RUNNING", "worker_id": "kafka-connect:8083"}]
+    }
+  },
+  "checkout-outbox": {
+    "status": {
+      "name": "checkout-outbox",
+      "type": "source",
+      "connector": {"state": "RUNNING", "worker_id": "kafka-connect:8083"},
+      "tasks": [{"id": 0, "state": "FAILED", "worker_id": "kafka-connect:8083", "trace": "ERR no such key\nat com.redis..."}]
+    }
+  }
+}`
+
+// writeConnectStackFile points services.kafkaConnect.ports.rest at a fake worker,
+// so `connectors status` talks to it over the host port like it does for real.
+func writeConnectStackFile(t *testing.T, restPort int) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "pyahu.yaml")
+	content := fmt.Sprintf(`apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: demo
+services:
+  kafka:
+    enabled: true
+  kafkaConnect:
+    enabled: true
+    ports:
+      rest: %d
+    connectors:
+      - name: allpick-core-outbox
+        kind: custom
+        optional: true
+        config:
+          connector.class: io.debezium.connector.postgresql.PostgresConnector
+      - name: checkout-outbox
+        kind: custom
+        optional: true
+        config:
+          connector.class: com.redis.kafka.connect.RedisStreamSourceConnector
+`, restPort)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func startFakeConnect(t *testing.T, body string) int {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, body)
+	}))
+	t.Cleanup(server.Close)
+	parsed, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	port, err := strconv.Atoi(parsed.Port())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return port
+}
+
+func TestConnectorsStatusFailsOnAFailedTask(t *testing.T) {
+	stackPath := writeConnectStackFile(t, startFakeConnect(t, connectStatusJSON))
+
+	stdout, _, err := executeTestCommand(t, nil, "--file", stackPath, "connectors", "status", "--no-color")
+	if err == nil {
+		t.Fatal("expected a non-zero exit when a task is not RUNNING")
+	}
+	if got := exitCode(err); got != 5 {
+		t.Fatalf("exit code = %d", got)
+	}
+	want := `CONNECTOR            TASK  STATE    DETAIL
+allpick-core-outbox  -     RUNNING  source
+                     0     RUNNING  -
+checkout-outbox      -     RUNNING  source
+                     0     FAILED   ERR no such key
+`
+	if stdout != want {
+		t.Fatalf("stdout =\n%s\nwant\n%s", stdout, want)
+	}
+}
+
+func TestConnectorsStatusJSONReportsEachTask(t *testing.T) {
+	stackPath := writeConnectStackFile(t, startFakeConnect(t, connectStatusJSON))
+
+	stdout, _, err := executeTestCommand(t, nil, "--file", stackPath, "connectors", "status", "--format", "json")
+	if err == nil {
+		t.Fatal("expected a non-zero exit when a task is not RUNNING")
+	}
+	var got struct {
+		Healthy    bool `json:"healthy"`
+		Connectors []struct {
+			Name  string `json:"name"`
+			State string `json:"state"`
+			Tasks []struct {
+				ID    int    `json:"id"`
+				State string `json:"state"`
+			} `json:"tasks"`
+		} `json:"connectors"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Healthy {
+		t.Fatal("healthy should be false when a task is FAILED")
+	}
+	if len(got.Connectors) != 2 || got.Connectors[0].Name != "allpick-core-outbox" {
+		t.Fatalf("connectors = %#v", got.Connectors)
+	}
+	// The connector row stays RUNNING while its only task is FAILED — the trap
+	// this command exists to catch.
+	if got.Connectors[1].State != "RUNNING" || got.Connectors[1].Tasks[0].State != "FAILED" {
+		t.Fatalf("checkout-outbox = %#v", got.Connectors[1])
+	}
+}
+
+func TestConnectorsStatusSucceedsWhenEveryTaskRuns(t *testing.T) {
+	body := `{"app-cdc": {"status": {"name": "app-cdc", "type": "source",
+	  "connector": {"state": "RUNNING"}, "tasks": [{"id": 0, "state": "RUNNING"}]}}}`
+	stackPath := writeConnectStackFile(t, startFakeConnect(t, body))
+
+	if _, _, err := executeTestCommand(t, nil, "--file", stackPath, "connectors", "status"); err != nil {
+		t.Fatalf("expected success: %v", err)
+	}
+}
+
+func TestConnectorsStatusFailsWhenAConnectorHasNoTasks(t *testing.T) {
+	body := `{"app-cdc": {"status": {"name": "app-cdc", "type": "source",
+	  "connector": {"state": "RUNNING"}, "tasks": []}}}`
+	stackPath := writeConnectStackFile(t, startFakeConnect(t, body))
+
+	stdout, _, err := executeTestCommand(t, nil, "--file", stackPath, "connectors", "status", "--no-color")
+	if err == nil {
+		t.Fatal("expected a non-zero exit for a connector with no tasks")
+	}
+	if !strings.Contains(stdout, "NO TASKS") {
+		t.Fatalf("stdout does not report the missing tasks:\n%s", stdout)
+	}
+}
+
+func TestConnectorsApplyRejectsAnUndeclaredName(t *testing.T) {
+	stackPath := writeConnectStackFile(t, 8083)
+	rt := &fakeRuntime{installed: true, exists: true, kubeconfig: "/tmp/kubeconfig"}
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+		a.deps.newKube = func(kubeconfig string) (localKube, error) { return fakeKube{}, nil }
+	}
+
+	_, _, err := executeTestCommand(t, mutate, "--file", stackPath, "connectors", "apply", "--name", "nope")
+	if err == nil || !strings.Contains(err.Error(), `connector "nope" is not declared`) {
+		t.Fatalf("error = %v", err)
+	}
+	if got := exitCode(err); got != 2 {
+		t.Fatalf("exit code = %d", got)
+	}
+}
+
+func TestConnectorsApplyJSONListsTheAppliedConnectors(t *testing.T) {
+	stackPath := writeConnectStackFile(t, 8083)
+	rt := &fakeRuntime{installed: true, exists: true, kubeconfig: "/tmp/kubeconfig"}
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+		a.deps.newKube = func(kubeconfig string) (localKube, error) { return fakeKube{}, nil }
+	}
+
+	stdout, _, err := executeTestCommand(t, mutate, "--file", stackPath, "connectors", "apply", "--output", "json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Connectors []string `json:"connectors"`
+		Applied    bool     `json:"applied"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.Applied || strings.Join(got.Connectors, ",") != "allpick-core-outbox,checkout-outbox" {
+		t.Fatalf("apply result = %#v", got)
+	}
+}
+
+func TestUpWarnsAboutPendingOptionalConnectors(t *testing.T) {
+	stackPath := writeConnectStackFile(t, 8083)
+	rt := &fakeRuntime{installed: true, exists: true, kubeconfig: "/tmp/kubeconfig"}
+	warning := "connector checkout-outbox is not healthy yet — run `pyahu connectors apply` after the application has started"
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+		a.deps.newKube = func(kubeconfig string) (localKube, error) { return fakeKube{warnings: []string{warning}}, nil }
+		a.deps.runDoctor = func(ctx context.Context, stack *schema.Stack, clusterExists bool) []doctor.Check {
+			return []doctor.Check{{Name: "k3d", OK: true, Message: "ok"}}
+		}
+	}
+
+	stdout, _, err := executeTestCommand(t, mutate, "--file", stackPath, "up", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout, warning) {
+		t.Fatalf("up summary does not carry the optional-connector warning:\n%s", stdout)
+	}
 }

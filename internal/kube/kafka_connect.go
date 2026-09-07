@@ -102,23 +102,55 @@ func (c *Client) applyKafkaConnectTopicJobs(ctx context.Context, stack *schema.S
 	return nil
 }
 
-func (c *Client) applyKafkaConnectConnectorJobs(ctx context.Context, stack *schema.Stack) error {
-	serviceLabels := baseLabels(stack, "kafka-connect")
-	serviceLabels["app.kubernetes.io/name"] = "kafka-connect"
-	for _, connector := range stack.Services.KafkaConnect.Connectors {
-		payload, err := kafkaConnectConnectorPayload(stack, connector)
+// ApplyConnectors re-registers the declared connectors (all of them, or the one
+// named) and waits for their tasks to run. applyJob deletes and recreates a Job
+// that has not succeeded, so the command is idempotent.
+func (c *Client) ApplyConnectors(ctx context.Context, stack *schema.Stack, name string) error {
+	if !stack.KafkaConnectEnabled() {
+		return fmt.Errorf("services.kafkaConnect is not enabled")
+	}
+	if err := c.WaitForService(ctx, stack.Cluster.Namespace, "kafka-connect", connectorWaitTimeout); err != nil {
+		return fmt.Errorf("wait for kafka-connect: %w", err)
+	}
+	for i, connector := range stack.Services.KafkaConnect.Connectors {
+		if name != "" && connector.Name != name {
+			continue
+		}
+		if err := c.applyKafkaConnectConnectorJob(ctx, stack, connector); err != nil {
+			return err
+		}
+		names, err := kafkaConnectConnectorJobNames(stack)
 		if err != nil {
 			return err
 		}
-		secret := kafkaConnectConnectorSecret(stack, serviceLabels, connector, payload)
-		if err := c.applySecret(ctx, secret); err != nil {
-			return err
+		if err := c.waitForJob(ctx, stack.Cluster.Namespace, names[i], connectorWaitTimeout); err != nil {
+			return fmt.Errorf("connector %s did not become healthy: %w", connector.Name, err)
 		}
-		if err := c.applyJob(ctx, kafkaConnectConnectorJob(stack, connector, secret.Name, payload)); err != nil {
+	}
+	return nil
+}
+
+func (c *Client) applyKafkaConnectConnectorJobs(ctx context.Context, stack *schema.Stack) error {
+	for _, connector := range stack.Services.KafkaConnect.Connectors {
+		if err := c.applyKafkaConnectConnectorJob(ctx, stack, connector); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (c *Client) applyKafkaConnectConnectorJob(ctx context.Context, stack *schema.Stack, connector schema.KafkaConnectConnector) error {
+	serviceLabels := baseLabels(stack, "kafka-connect")
+	serviceLabels["app.kubernetes.io/name"] = "kafka-connect"
+	payload, err := kafkaConnectConnectorPayload(stack, connector)
+	if err != nil {
+		return err
+	}
+	secret := kafkaConnectConnectorSecret(stack, serviceLabels, connector, payload)
+	if err := c.applySecret(ctx, secret); err != nil {
+		return err
+	}
+	return c.applyJob(ctx, kafkaConnectConnectorJob(stack, connector, secret.Name, payload))
 }
 
 func kafkaConnectTopicJobNames(stack *schema.Stack) []string {

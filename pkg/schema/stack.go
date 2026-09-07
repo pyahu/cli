@@ -283,6 +283,11 @@ type KafkaConnectConnector struct {
 	Tables       TableFilter       `json:"tables,omitempty" yaml:"tables,omitempty"`
 	SnapshotMode string            `json:"snapshotMode,omitempty" yaml:"snapshotMode,omitempty"`
 	Config       map[string]string `json:"config,omitempty" yaml:"config,omitempty"`
+	// Optional marks a connector whose source (a table, a publication, a stream)
+	// only exists after the application has booted once. Registration failure
+	// during `pyahu up` is a warning instead of an error; `pyahu connectors
+	// apply` registers it later.
+	Optional *bool `json:"optional,omitempty" yaml:"optional,omitempty"`
 }
 
 type DebeziumConnector = KafkaConnectConnector
@@ -544,10 +549,10 @@ func (s *Stack) SetDefaults() {
 					connector.Kind = "debezium.postgres"
 				}
 			}
+			if connector.Type == "" {
+				connector.Type = "source"
+			}
 			if connector.Kind == "debezium.postgres" {
-				if connector.Type == "" {
-					connector.Type = "source"
-				}
 				if connector.Database == "" && s.Services.Postgres != nil && len(s.Services.Postgres.Databases) > 0 {
 					connector.Database = s.Services.Postgres.Databases[0].Name
 				}
@@ -1303,6 +1308,12 @@ func (s *Stack) KafkaConnectPluginDirs() []string {
 		dirs = append(dirs, plugin.Name)
 	}
 	return dirs
+}
+
+// ConnectorOptional reports whether a registration failure during `pyahu up` is
+// a warning rather than an error.
+func ConnectorOptional(connector KafkaConnectConnector) bool {
+	return connector.Optional != nil && *connector.Optional
 }
 
 func (s *Stack) KafkaConnectPlugins() []KafkaConnectPlugin {

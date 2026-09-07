@@ -21,6 +21,11 @@ import (
 	"github.com/pyahu/cli/pkg/schema"
 )
 
+const (
+	connectorWaitTimeout         = 2 * time.Minute
+	optionalConnectorWaitTimeout = 30 * time.Second
+)
+
 type Client struct {
 	clientset  kubernetes.Interface
 	restConfig *rest.Config
@@ -122,67 +127,101 @@ func (c *Client) DeleteNamespace(ctx context.Context, namespace string) error {
 	return err
 }
 
-func (c *Client) WaitForStack(ctx context.Context, stack *schema.Stack) error {
+// WaitForStack blocks until every enabled service is ready. It returns the
+// warnings collected on the way: an optional connector that is not healthy yet
+// is reported, not fatal, because its source usually only exists after the
+// application has booted once.
+func (c *Client) WaitForStack(ctx context.Context, stack *schema.Stack) ([]string, error) {
+	var warnings []string
 	if stack.PostgresEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "postgres", 3*time.Minute); err != nil {
-			return fmt.Errorf("wait for postgres: %w", err)
+			return warnings, fmt.Errorf("wait for postgres: %w", err)
 		}
 	}
 	if stack.RabbitMQEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "rabbitmq", 3*time.Minute); err != nil {
-			return fmt.Errorf("wait for rabbitmq: %w", err)
+			return warnings, fmt.Errorf("wait for rabbitmq: %w", err)
 		}
 	}
 	if stack.RedisEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "redis", 3*time.Minute); err != nil {
-			return fmt.Errorf("wait for redis: %w", err)
+			return warnings, fmt.Errorf("wait for redis: %w", err)
 		}
 	}
 	if stack.KafkaEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "kafka", 4*time.Minute); err != nil {
-			return fmt.Errorf("wait for kafka: %w", err)
+			return warnings, fmt.Errorf("wait for kafka: %w", err)
 		}
 		if err := c.applyKafkaTopicJobs(ctx, stack); err != nil {
-			return fmt.Errorf("apply kafka topic jobs: %w", err)
+			return warnings, fmt.Errorf("apply kafka topic jobs: %w", err)
 		}
 		if err := c.waitForJobs(ctx, stack.Cluster.Namespace, kafkaTopicJobNames(stack), 2*time.Minute); err != nil {
-			return fmt.Errorf("wait for kafka topic jobs: %w", err)
+			return warnings, fmt.Errorf("wait for kafka topic jobs: %w", err)
 		}
 		if stack.KafkaConnectEnabled() {
 			if err := c.applyKafkaConnectTopicJobs(ctx, stack); err != nil {
-				return fmt.Errorf("apply kafka connect topic jobs: %w", err)
+				return warnings, fmt.Errorf("apply kafka connect topic jobs: %w", err)
 			}
 			if err := c.waitForJobs(ctx, stack.Cluster.Namespace, kafkaConnectTopicJobNames(stack), 2*time.Minute); err != nil {
-				return fmt.Errorf("wait for kafka connect topic jobs: %w", err)
+				return warnings, fmt.Errorf("wait for kafka connect topic jobs: %w", err)
 			}
 		}
 	}
 	if stack.KafkaConnectEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "kafka-connect", 4*time.Minute); err != nil {
-			return fmt.Errorf("wait for kafka-connect: %w", err)
+			return warnings, fmt.Errorf("wait for kafka-connect: %w", err)
 		}
 		if err := c.applyKafkaConnectConnectorJobs(ctx, stack); err != nil {
-			return fmt.Errorf("apply kafka connect connector jobs: %w", err)
+			return warnings, fmt.Errorf("apply kafka connect connector jobs: %w", err)
 		}
-		names, err := kafkaConnectConnectorJobNames(stack)
+		connectorWarnings, err := c.waitForKafkaConnectConnectors(ctx, stack)
+		warnings = append(warnings, connectorWarnings...)
 		if err != nil {
-			return err
-		}
-		if err := c.waitForJobs(ctx, stack.Cluster.Namespace, names, 2*time.Minute); err != nil {
-			return fmt.Errorf("wait for kafka connect connector jobs: %w", err)
+			return warnings, err
 		}
 	}
 	if stack.KafkaUIEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "kafka-ui", 3*time.Minute); err != nil {
-			return fmt.Errorf("wait for kafka-ui: %w", err)
+			return warnings, fmt.Errorf("wait for kafka-ui: %w", err)
 		}
 	}
 	if stack.ZitadelEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "zitadel", 6*time.Minute); err != nil {
-			return fmt.Errorf("wait for zitadel: %w", err)
+			return warnings, fmt.Errorf("wait for zitadel: %w", err)
 		}
 	}
-	return nil
+	return warnings, nil
+}
+
+// waitForKafkaConnectConnectors waits per connector so one optional connector
+// that never becomes healthy does not hide the state of the others.
+func (c *Client) waitForKafkaConnectConnectors(ctx context.Context, stack *schema.Stack) ([]string, error) {
+	names, err := kafkaConnectConnectorJobNames(stack)
+	if err != nil {
+		return nil, err
+	}
+	var warnings []string
+	for i, connector := range stack.Services.KafkaConnect.Connectors {
+		timeout := connectorWaitTimeout
+		if schema.ConnectorOptional(connector) {
+			// An optional connector is declared as "may not be registrable yet",
+			// so the wait only has to cover the case where its source already
+			// exists; a full wait per connector would stall every `pyahu up`.
+			timeout = optionalConnectorWaitTimeout
+		}
+		err := c.waitForJob(ctx, stack.Cluster.Namespace, names[i], timeout)
+		if err == nil {
+			continue
+		}
+		if ctx.Err() != nil {
+			return warnings, ctx.Err()
+		}
+		if !schema.ConnectorOptional(connector) {
+			return warnings, fmt.Errorf("wait for kafka connect connector jobs: %w", err)
+		}
+		warnings = append(warnings, fmt.Sprintf("connector %s is not healthy yet — run `pyahu connectors apply` after the application has started", connector.Name))
+	}
+	return warnings, nil
 }
 
 func (c *Client) WaitForService(ctx context.Context, namespace string, service string, timeout time.Duration) error {
