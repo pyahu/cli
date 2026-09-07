@@ -1,8 +1,8 @@
 # Redis Service, Kafka Connect Plugins, and Deferred Connectors
 
-Status: draft
+Status: implemented
 Date: 2026-09-07
-Applies to: stack file `cli.pyahu.io/v1alpha1`, CLI v0.2.0
+Applies to: stack file `cli.pyahu.io/v1alpha1`, CLI v0.6.0 and later
 
 ## Motivation
 
@@ -60,9 +60,8 @@ Defaults:
 - `enabled`: `true` when `services.redis` is present
 - `image`: `valkey/valkey` (Valkey is the upstream-compatible default; users
   can set `image: redis`)
-- `version`: Pyahu default Valkey tag (confirm the tag exists on Docker Hub
-  before pinning; fallback `redis` `7.4-alpine`). Both support `WAITAOF`,
-  which requires Redis ≥ 7.2.
+- `version`: `8.1-alpine`. Valkey and `redis` `7.4-alpine` both support
+  `WAITAOF`, which requires Redis ≥ 7.2.
 - `ports.client`: `6379`
 - `auth.password`: empty (no `--requirepass`)
 - `appendOnly`: `true` → container args `--appendonly yes --appendfsync everysec`.
@@ -209,12 +208,26 @@ New command group:
   `optional` under Kafka Connect), `examples/platform.yaml`, `README.md`,
   website pages `configuracao.md`, `comandos.md`,
   `kafka-connect-debezium.md` (pt and en), and `docs/specs/README.md`.
-- Release: tag `v0.2.0` after the three sections land on `main`.
+- Release: cut by CI from the Conventional Commits on `main`. The three sections
+  and the connector-restart fix shipped as `v0.4.0` through `v0.6.1`.
 
-## Open questions
+## Answered during implementation
 
-- Whether the Debezium entrypoint honors `CONNECT_PLUGIN_PATH` when
-  `KAFKA_CONNECT_PLUGINS_DIR` is also set — verified during implementation
-  with `/connector-plugins`; the `subPath` fallback is documented above.
-- Valkey tag to pin as default. `8.1-alpine` is expected to exist; confirm
-  with `docker manifest inspect` before committing the constant.
+- **The Debezium entrypoint does honor `CONNECT_PLUGIN_PATH`.** With
+  `CONNECT_PLUGIN_PATH=/kafka/connect,/kafka/connect-extra`,
+  `GET /connector-plugins` lists the connector classes from the installed
+  artifacts and `?connectorsOnly=false` lists their transforms. The `subPath`
+  fallback described above was not needed.
+- **`valkey/valkey:8.1-alpine` exists**, `linux/arm64` included, and is the
+  pinned `DefaultRedisVersion`. The `redis:7.4-alpine` fallback went unused.
+- **`applyJob` re-creating the Job is not enough to recover a failed
+  connector.** A `PUT /connectors/<name>/config` with an unchanged config is a
+  no-op in Kafka Connect and does not restart a task that failed before its
+  source existed — which is the case `pyahu connectors apply` exists for. The
+  registration Job asks for
+  `POST /connectors/<name>/restart?includeTasks=true&onlyFailed=true` when it
+  sees `FAILED`, then keeps polling.
+- **An optional connector waits 30s during `up`, not the full 2 minutes.** By
+  declaration its source may not exist yet, so a full wait per connector would
+  add minutes to every `pyahu up` on a fresh cluster. `pyahu connectors apply`
+  keeps the 2-minute wait, which is where a long wait is the point.

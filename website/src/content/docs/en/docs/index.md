@@ -46,6 +46,7 @@ directory upward, so any subfolder of the project sees the same stack.
 | ZITADEL | `https://zitadel.localhost` |
 | RabbitMQ | `localhost:5672` |
 | RabbitMQ Management | `https://rabbitmq.localhost` |
+| Redis (Valkey) | `localhost:6379` |
 | Kafka | `localhost:9092` |
 | Kafka Connect | `http://localhost:8083` |
 | Debezium | configured via Kafka Connect |
@@ -53,7 +54,7 @@ directory upward, so any subfolder of the project sees the same stack.
 
 The HTTP UIs (ZITADEL, RabbitMQ, Kafka UI) go through Traefik on 80/443 with
 `*.localhost` hostnames and the local certificate. The TCP services (PostgreSQL,
-Kafka, RabbitMQ AMQP) and the Kafka Connect REST endpoint keep dedicated ports.
+Kafka, RabbitMQ AMQP, Redis) and the Kafka Connect REST endpoint keep dedicated ports.
 
 The `minimal` preset spins up only PostgreSQL. See [Configuration](/en/docs/configuracao) to
 adjust services, ports, and credentials.
