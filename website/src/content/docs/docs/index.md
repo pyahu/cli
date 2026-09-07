@@ -18,7 +18,13 @@ seu para inspecionar (`pyahu kubeconfig`) quando quiser.
 curl -fsSL https://cli.pyahu.io/install.sh | sh
 ```
 
-Outros métodos (script, `go install`, download manual) e os pré-requisitos estão em
+Ou com mise, que fixa a versão no repositório e deixa o time todo igual:
+
+```bash
+mise use "github:pyahu/cli@0.7.0"
+```
+
+Outros métodos (Pyahu toolchain, `go install`, download manual) e os pré-requisitos estão em
 [Instalação](/docs/instalacao).
 
 ## Primeiro cluster

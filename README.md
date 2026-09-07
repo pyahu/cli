@@ -52,30 +52,103 @@ $ pyahu up
 | RabbitMQ | AMQP messaging + management UI | `localhost:5672` · `https://rabbitmq.localhost` |
 | Redis | Valkey key-value store, AOF on by default | `localhost:6379` |
 | Kafka | Event streaming broker (KRaft) | `localhost:9092` |
-| Kafka Connect | Declarative connectors with Debezium CDC | `http://localhost:8083` |
+| Kafka Connect | Declarative connectors and plugins, Debezium CDC | `http://localhost:8083` |
 | Kafka UI | Topics, connectors and consumers | `https://kafka-ui.localhost` |
 
 HTTP UIs go through Traefik on host 80/443 with `*.localhost` hostnames and a
 shared local TLS certificate. TCP services and the Kafka Connect REST API use
 dedicated host ports.
 
+Kafka Connect takes its plugins from the stack file, so a connector that does not ship with the
+Debezium image does not mean building one:
+
+```yaml
+services:
+  kafkaConnect:
+    plugins:
+      - name: redis-kafka-connect
+        url: https://github.com/redis-field-engineering/redis-kafka-connect/releases/download/v1.1.0/redis-redis-kafka-connect-1.1.0.zip
+        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
+      - name: redis-kafka-connect      # same name = same plugin directory, for an SMT
+        file: connect-plugins/my-outbox-router.jar
+    connectors:
+      - name: orders-outbox
+        kind: debezium.postgres
+        optional: true                 # its table only exists after the app boots once
+        tables: { include: [public.outbox] }
+```
+
+An `optional` connector whose source does not exist yet is a warning during `pyahu up`, not a
+failure; `pyahu connectors apply` registers it after the first boot, and `pyahu connectors status`
+reports **every task**, because a connector stays `RUNNING` while its only task is `FAILED`.
+
 ## Install
 
-Released binaries are published for macOS, Linux, and Windows.
+Every release is published to
+[GitHub Releases](https://github.com/pyahu/cli/releases) — binaries for macOS, Linux and Windows
+(amd64 and arm64), plus `checksums.txt`. Every install method below pulls from there.
+
+### mise
+
+Pinning the CLI next to the rest of a project's toolchain is the recommended way: everyone on the
+team gets the same version, and it is recorded in the repo.
 
 ```bash
-# Install script (macOS and Linux)
+# in a project, writes to ./mise.toml
+mise use "github:pyahu/cli@0.7.0"
+
+# or for your user, everywhere
+mise use -g "github:pyahu/cli@0.7.0"
+
+mise install
+```
+
+```toml
+# mise.toml
+[tools]
+"github:pyahu/cli" = "0.7.0"
+```
+
+### Pyahu toolchain
+
+The [Pyahu toolchain](https://github.com/pyahu/toolchain) already pins the CLI in its `cloud`
+profile, along with k3d, kubectl and the rest of the Kubernetes set. If you use it, you have the
+CLI:
+
+```bash
+export MISE_ENV=cloud    # add to your shell rc
+mise install
+```
+
+### Install script (macOS and Linux)
+
+Downloads the release for your platform from GitHub Releases:
+
+```bash
 curl -fsSL https://cli.pyahu.io/install.sh | sh
 
 # pick an install dir, no sudo
 curl -fsSL https://cli.pyahu.io/install.sh | sh -s -- --bin-dir "$HOME/.local/bin"
-
-# Go 1.26+
-go install github.com/pyahu/cli/cmd/pyahu@latest
 ```
 
-Or grab a binary from the [releases page](https://github.com/pyahu/cli/releases).
-Full instructions, verification and shell completion: [Installation docs](https://cli.pyahu.io/docs/instalacao).
+### go install
+
+```bash
+go install github.com/pyahu/cli/cmd/pyahu@latest   # Go 1.26+
+```
+
+### Staying up to date
+
+The CLI warns when it is behind, and `pyahu upgrade` replaces a binary it owns after verifying the
+release checksum. A binary managed by mise is left to mise, and the command says so.
+
+```bash
+pyahu check-update
+pyahu upgrade
+```
+
+Full instructions, manual download and shell completion:
+[Installation docs](https://cli.pyahu.io/docs/instalacao).
 
 ### Requirements
 
@@ -93,6 +166,8 @@ pyahu up                       # create the cluster and apply the services
 pyahu certs trust              # trust the local CA for https://*.localhost
 
 pyahu services                 # list services and endpoints
+pyahu connectors apply         # register connectors whose source needed the app to boot
+pyahu connectors status        # connector and task state; non-zero if any task is not RUNNING
 eval "$(pyahu env)"            # load connection env vars into your shell
 pyahu down                     # tear it all down
 ```
