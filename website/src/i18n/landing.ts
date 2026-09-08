@@ -16,21 +16,11 @@ export const ui = {
     hero: {
       eyebrow: "infra local para desenvolvimento",
       titleLead: "Sua stack local.",
-      titleAccent: "Em um comando.",
+      titleAccent: "Em três passos.",
       copy: "Suba banco de dados, autenticação e mensageria em Kubernetes na sua máquina. Conecte sua aplicação e comece a desenvolver.",
       ctaStart: "Instalar a CLI",
       ctaCommands: "Documentação",
       meta: "macOS e Linux · requer Docker ou Podman + k3d",
-      terminalAlt: "Resumo ilustrativo da stack iniciada com pyahu up",
-      summary: ["Cluster Kubernetes local", "PostgreSQL e Redis", "Autenticação com ZITADEL", "Kafka, RabbitMQ e Debezium"],
-      result: "Stack pronta para sua aplicação.",
-      example: "Exemplo com o preset platform já configurado.",
-      term: {
-        preflight: "Docker, k3d e portas locais",
-        cluster: "k3d pyahu-local pronto",
-        certsApplied: "aplicado",
-        services: "postgres · zitadel · rabbitmq · redis · kafka",
-      },
     },
     services: {
       eyebrow: "o que sobe",
@@ -54,11 +44,11 @@ export const ui = {
     },
     steps: {
       eyebrow: "começo rápido",
-      title: "Do zero ao cluster rodando em três passos.",
+      title: "Do setup ao código.",
       items: [
-        { n: "01", title: "Gere a stack", text: "Um preset escreve um pyahu.yaml legível com os serviços, portas e credenciais locais.", code: "pyahu init --preset platform" },
-        { n: "02", title: "Suba o cluster", text: "A CLI valida dependências, cria o k3d e reconcilia os recursos Kubernetes de forma idempotente.", code: "pyahu up" },
-        { n: "03", title: "Conecte os apps", text: "Endpoints previsíveis em localhost e variáveis de ambiente prontas para colar.", code: 'eval "$(pyahu env)"' },
+        { n: "01", title: "Gere a stack", text: "Escolha um preset para criar o pyahu.yaml.", code: "pyahu init --preset platform" },
+        { n: "02", title: "Suba o cluster", text: "Inicie o Kubernetes e os serviços da sua stack.", code: "pyahu up" },
+        { n: "03", title: "Conecte os apps", text: "Carregue as variáveis de conexão para desenvolver.", code: 'eval "$(pyahu env)"' },
       ] as Step[],
     },
     install: {
@@ -131,21 +121,11 @@ export const ui = {
     hero: {
       eyebrow: "local infrastructure for development",
       titleLead: "Your local stack.",
-      titleAccent: "One command away.",
+      titleAccent: "In three steps.",
       copy: "Run databases, authentication and messaging in Kubernetes on your machine. Connect your application and start building.",
       ctaStart: "Install the CLI",
       ctaCommands: "Documentation",
       meta: "macOS and Linux · requires Docker or Podman + k3d",
-      terminalAlt: "Illustrative summary of the stack started with pyahu up",
-      summary: ["Local Kubernetes cluster", "PostgreSQL and Redis", "Authentication with ZITADEL", "Kafka, RabbitMQ and Debezium"],
-      result: "Stack ready for your application.",
-      example: "Example with the platform preset already configured.",
-      term: {
-        preflight: "Docker, k3d and local ports",
-        cluster: "k3d pyahu-local ready",
-        certsApplied: "applied",
-        services: "postgres · zitadel · rabbitmq · redis · kafka",
-      },
     },
     services: {
       eyebrow: "what runs",
@@ -169,11 +149,11 @@ export const ui = {
     },
     steps: {
       eyebrow: "quick start",
-      title: "From zero to a running cluster in three steps.",
+      title: "From setup to code.",
       items: [
-        { n: "01", title: "Generate the stack", text: "A preset writes a readable pyahu.yaml with the local services, ports and credentials.", code: "pyahu init --preset platform" },
-        { n: "02", title: "Bring up the cluster", text: "The CLI validates dependencies, creates k3d and reconciles the Kubernetes resources idempotently.", code: "pyahu up" },
-        { n: "03", title: "Connect your apps", text: "Predictable endpoints on localhost and connection env vars ready to paste.", code: 'eval "$(pyahu env)"' },
+        { n: "01", title: "Generate the stack", text: "Choose a preset to create your pyahu.yaml.", code: "pyahu init --preset platform" },
+        { n: "02", title: "Bring up the cluster", text: "Start Kubernetes and the services in your stack.", code: "pyahu up" },
+        { n: "03", title: "Connect your apps", text: "Load the connection variables and start building.", code: 'eval "$(pyahu env)"' },
       ] as Step[],
     },
     install: {
@@ -240,18 +220,14 @@ export const ui = {
 export const experience = {
   "pt-BR": {
     menu: "Menu", services: "A stack", workflow: "Como funciona", install: "Instalar", platform: "Pyahu Platform",
-    sample: "EXEMPLO DE SESSÃO LOCAL", open: "COMMUNITY · OPEN SOURCE", ready: "Seu ambiente de desenvolvimento, sob seu controle.",
-    principles: ["Configuração versionável", "Serviços reais, localmente", "Kubernetes inspecionável"],
     copy: "Copiar comando", copied: "Copiado!", copyError: "Selecione o comando para copiar.",
     ecosystem: { eyebrow: "PARTE DA PYAHU PLATFORM", title: "O caminho para produção\ncomeça na sua máquina.", body: "A CLI é a base local da suíte Pyahu. Prepare as ferramentas com a Toolchain, desenvolva e valide com a CLI e evolua para a infraestrutura que seu time precisa.", action: "Conheça a plataforma", local: "Desenvolva e valide", prepare: "Prepare o ambiente", operate: "Evolua a operação", soon: "AI Factory e Initializer · Em breve" },
-    release: "Baixar no GitHub", requirement: "Antes de começar: Docker ou Podman em execução e k3d no PATH.",
+    release: "Baixar no GitHub", requirement: "Requer a CLI instalada, Docker ou Podman em execução e k3d no PATH.",
   },
   en: {
     menu: "Menu", services: "The stack", workflow: "How it works", install: "Install", platform: "Pyahu Platform",
-    sample: "EXAMPLE LOCAL SESSION", open: "COMMUNITY · OPEN SOURCE", ready: "Your development environment, under your control.",
-    principles: ["Versionable configuration", "Real services, locally", "Inspectable Kubernetes"],
     copy: "Copy command", copied: "Copied!", copyError: "Select the command to copy it.",
     ecosystem: { eyebrow: "PART OF PYAHU PLATFORM", title: "The path to production\nstarts on your machine.", body: "The CLI is the local foundation of the Pyahu suite. Prepare your tools with Toolchain, develop and validate with the CLI, and grow into the infrastructure your team needs.", action: "Explore the platform", local: "Develop and validate", prepare: "Prepare your tools", operate: "Grow your operations", soon: "AI Factory and Initializer · Coming soon" },
-    release: "Download on GitHub", requirement: "Before you start: Docker or Podman running and k3d on your PATH.",
+    release: "Download on GitHub", requirement: "Requires the CLI installed, Docker or Podman running and k3d on your PATH.",
   },
 };

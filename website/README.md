@@ -15,8 +15,9 @@ npm run build
 The design follows Pyahu Platform: deep navy and blue, Space Grotesk and IBM Plex
 Mono served locally, shared Pyahu icon geometry and editorial spacing. The CLI has its own terminal
 identity with cyan accents, a vertical command walkthrough, a service inventory
-and an inset ecosystem panel. There is no full-width strip below the hero. The hero terminal is a short illustrative outcome, not a live cluster or verbatim
-command output. Installation commands and clipboard controls live in the installation
+and an inset ecosystem panel. There is no full-width strip below the hero. The hero combines the product introduction and the three real commands in a single
+open workflow. There is no separate terminal illustration or repeated quickstart
+section. Installation commands and clipboard controls live in the installation
 section; the hero has one primary install action and a secondary documentation link.
 
 - `src/components/Landing.astro`: product page, keyboard-operable installation

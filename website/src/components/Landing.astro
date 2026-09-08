@@ -30,39 +30,20 @@ const installFoot = t.install.foot.replace("$DOCS", docs);
         </div>
       </div>
 
-      <figure class="terminal" aria-label={t.hero.terminalAlt}>
-        <div class="terminal-bar">
-          <span class="terminal-session"><Icon name="terminal" size={18} />pyahu-local</span>
-          <span class="terminal-title">{x.sample}</span>
-        </div>
-        <pre class="terminal-body"><code><span class="t-prompt">$</span> <span class="t-cmd">pyahu up</span></code></pre>
-        <ul class="terminal-summary">{t.hero.summary.map(line => <li><span aria-hidden="true">✓</span>{line}</li>)}</ul>
-        <p class="terminal-result"><span class="signal" />{t.hero.result}</p>
-        <figcaption>{t.hero.example}</figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <section class="section steps-section" id="quickstart" aria-labelledby="steps-title">
-    <div class="section-heading">
-      <p class="eyebrow">{t.steps.eyebrow}</p>
-      <h2 id="steps-title">{t.steps.title}</h2><p class="section-lead">{x.requirement}</p>
-      <ul class="workflow-principles">{x.principles.map((item, i) => <li><Icon name={(["contract", "layers", "review"] as const)[i]} size={18} />{item}</li>)}</ul>
-    </div>
-    <div class="steps-grid">
-      {
-        t.steps.items.map((step) => (
-          <article class="step-card">
-            <span class="step-number">{step.n}</span>
-            <h3>{step.title}</h3>
-            <p>{step.text}</p>
-            <div class="step-code">
-              <span>$</span>
-              <code>{step.code}</code>
-            </div>
-          </article>
-        ))
-      }
+      <div class="hero-workflow" id="quickstart" aria-labelledby="steps-title">
+        <h2 id="steps-title">{t.steps.title}</h2>
+        <ol class="steps-list">
+          {t.steps.items.map(step => (
+            <li class="step">
+              <span class="step-number" aria-hidden="true">{step.n}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+              <div class="step-code"><span aria-hidden="true">$</span><code>{step.code}</code></div>
+            </li>
+          ))}
+        </ol>
+        <p class="workflow-requirement">{x.requirement}</p>
+      </div>
     </div>
   </section>
 
