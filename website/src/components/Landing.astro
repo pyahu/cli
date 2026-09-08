@@ -26,13 +26,8 @@ const installFoot = t.install.foot.replace("$DOCS", docs);
         <p class="hero-copy">{t.hero.copy}</p>
         <div class="hero-actions">
           <a class="button primary" href="#instalar">{t.hero.ctaStart}<Icon name="arrow" size={18} /></a>
-          <a class="button secondary" href={`${docs}/comandos`}>{t.hero.ctaCommands}</a>
+          <a class="hero-docs" href={docs}>{t.hero.ctaCommands}<Icon name="arrow" size={16} /></a>
         </div>
-        <div class="hero-install" data-copy-widget>
-          <span class="hero-install-prompt">$</span>
-          <code data-copy-command>curl -fsSL https://cli.pyahu.io/install.sh | sh</code><button type="button" class="copy-button" data-copy aria-label={x.copy} title={x.copy}><Icon name="contract" size={17} /></button><span class="sr-only" data-copy-status role="status" data-success={x.copied} data-error={x.copyError}></span>
-        </div>
-        <p class="hero-meta">{t.hero.meta}</p>
       </div>
 
       <figure class="terminal" aria-label={t.hero.terminalAlt}>
@@ -40,21 +35,10 @@ const installFoot = t.install.foot.replace("$DOCS", docs);
           <span class="terminal-session"><Icon name="terminal" size={18} />pyahu-local</span>
           <span class="terminal-title">{x.sample}</span>
         </div>
-        <pre class="terminal-body"><code><span class="t-prompt">$</span> <span class="t-cmd">pyahu init --preset platform</span>
-<span class="t-prompt">$</span> <span class="t-cmd">pyahu up</span>
-<span class="t-tag">[preflight]</span> <span class="t-dim">{t.hero.term.preflight}</span> <span class="t-ok">OK</span>
-<span class="t-tag">[cluster]</span>   <span class="t-dim">{t.hero.term.cluster}</span>
-<span class="t-tag">[certs]</span>     <span class="t-dim">Secret</span> pyahu-local-tls <span class="t-dim">{t.hero.term.certsApplied}</span>
-<span class="t-tag">[services]</span>  <span class="t-dim">{t.hero.term.services}</span>
-
-<span class="t-ok">Pyahu local stack is ready</span>
-
-<span class="t-prompt">$</span> <span class="t-cmd">pyahu services</span>
-<span class="t-head">SERVICE        STATUS  ENDPOINTS</span>
-postgres       <span class="t-ok">ready</span>   localhost:5432
-zitadel        <span class="t-ok">ready</span>   https://zitadel.localhost
-rabbitmq       <span class="t-ok">ready</span>   localhost:5672
-kafka-connect  <span class="t-ok">ready</span>   http://localhost:8083</code></pre><figcaption><span class="signal" />{x.ready}</figcaption>
+        <pre class="terminal-body"><code><span class="t-prompt">$</span> <span class="t-cmd">pyahu up</span></code></pre>
+        <ul class="terminal-summary">{t.hero.summary.map(line => <li><span aria-hidden="true">✓</span>{line}</li>)}</ul>
+        <p class="terminal-result"><span class="signal" />{t.hero.result}</p>
+        <figcaption>{t.hero.example}</figcaption>
       </figure>
     </div>
   </section>
@@ -134,9 +118,13 @@ secret/pyahu-local-tls  <span class="t-dim">kubernetes.io/tls</span></code></pre
         <button class="install-tab" role="tab" aria-selected="false" id="install-tab-release" aria-controls="install-panel-release" tabindex="-1" data-tab="release">Releases</button>
       </div>
       <div class="install-panels">
-        <pre class="install-panel is-active" role="tabpanel" id="install-panel-script" aria-labelledby="install-tab-script" tabindex="0" data-panel="script"><code><span class="t-comment">{t.install.comments.script}</span>
-<span class="t-prompt">$</span> curl -fsSL https://cli.pyahu.io/install.sh | sh
+        <div class="install-panel is-active" role="tabpanel" id="install-panel-script" aria-labelledby="install-tab-script" tabindex="0" data-panel="script" data-copy-widget>
+          <pre><code><span class="t-comment">{t.install.comments.script}</span>
+<span class="t-prompt">$</span> <span data-copy-command>curl -fsSL https://cli.pyahu.io/install.sh | sh</span>
 <span class="t-prompt">$</span> pyahu --version</code></pre>
+          <button type="button" class="copy-button install-copy" data-copy><Icon name="contract" size={17} />{x.copy}</button>
+          <span class="copy-status" data-copy-status role="status" data-success={x.copied} data-error={x.copyError}></span>
+        </div>
         <pre class="install-panel" role="tabpanel" id="install-panel-go" aria-labelledby="install-tab-go" tabindex="0" data-panel="go" hidden><code><span class="t-comment">{t.install.comments.go}</span>
 <span class="t-prompt">$</span> go install github.com/pyahu/cli/cmd/pyahu@latest</code></pre>
         <pre class="install-panel" role="tabpanel" id="install-panel-release" aria-labelledby="install-tab-release" tabindex="0" data-panel="release" hidden><code><span class="t-comment">{t.install.comments.release}</span>
