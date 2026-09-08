@@ -13,8 +13,9 @@ npm run build
 ```
 
 The design follows Pyahu Platform: deep navy and blue, Space Grotesk and IBM Plex
-Mono served locally, shared Pyahu icon geometry, editorial sections and a light
-platform section. The terminal is an illustrative session, not a live cluster.
+Mono served locally, shared Pyahu icon geometry and editorial spacing. The CLI has its own terminal
+identity with cyan accents, a vertical command walkthrough, a service inventory
+and an inset ecosystem panel. There is no full-width strip below the hero. The terminal is an illustrative session, not a live cluster.
 
 - `src/components/Landing.astro`: product page, keyboard-operable installation
   tabs and clipboard button with success/failure feedback.

@@ -235,7 +235,7 @@ export const experience = {
   "pt-BR": {
     menu: "Menu", services: "A stack", workflow: "Como funciona", install: "Instalar", platform: "Pyahu Platform",
     sample: "EXEMPLO DE SESSÃO LOCAL", open: "COMMUNITY · OPEN SOURCE", ready: "Seu ambiente de desenvolvimento, sob seu controle.",
-    strip: ["Configuração versionável", "Serviços reais, localmente", "Kubernetes inspecionável"],
+    principles: ["Configuração versionável", "Serviços reais, localmente", "Kubernetes inspecionável"],
     copy: "Copiar comando", copied: "Copiado!", copyError: "Selecione o comando para copiar.",
     ecosystem: { eyebrow: "PARTE DA PYAHU PLATFORM", title: "O caminho para produção\ncomeça na sua máquina.", body: "A CLI é a base local da suíte Pyahu. Prepare as ferramentas com a Toolchain, desenvolva e valide com a CLI e evolua para a infraestrutura que seu time precisa.", action: "Conheça a plataforma", local: "Desenvolva e valide", prepare: "Prepare o ambiente", operate: "Evolua a operação", soon: "AI Factory e Initializer · Em breve" },
     release: "Baixar no GitHub", requirement: "Antes de começar: Docker ou Podman em execução e k3d no PATH.",
@@ -243,7 +243,7 @@ export const experience = {
   en: {
     menu: "Menu", services: "The stack", workflow: "How it works", install: "Install", platform: "Pyahu Platform",
     sample: "EXAMPLE LOCAL SESSION", open: "COMMUNITY · OPEN SOURCE", ready: "Your development environment, under your control.",
-    strip: ["Versionable configuration", "Real services, locally", "Inspectable Kubernetes"],
+    principles: ["Versionable configuration", "Real services, locally", "Inspectable Kubernetes"],
     copy: "Copy command", copied: "Copied!", copyError: "Select the command to copy it.",
     ecosystem: { eyebrow: "PART OF PYAHU PLATFORM", title: "The path to production\nstarts on your machine.", body: "The CLI is the local foundation of the Pyahu suite. Prepare your tools with Toolchain, develop and validate with the CLI, and grow into the infrastructure your team needs.", action: "Explore the platform", local: "Develop and validate", prepare: "Prepare your tools", operate: "Grow your operations", soon: "AI Factory and Initializer · Coming soon" },
     release: "Download on GitHub", requirement: "Before you start: Docker or Podman running and k3d on your PATH.",

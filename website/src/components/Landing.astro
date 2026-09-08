@@ -37,9 +37,7 @@ const installFoot = t.install.foot.replace("$DOCS", docs);
 
       <figure class="terminal" aria-label={t.hero.terminalAlt}>
         <div class="terminal-bar">
-          <span class="dot dot-red"></span>
-          <span class="dot dot-amber"></span>
-          <span class="dot dot-green"></span>
+          <span class="terminal-session"><Icon name="terminal" size={18} />pyahu-local</span>
           <span class="terminal-title">{x.sample}</span>
         </div>
         <pre class="terminal-body"><code><span class="t-prompt">$</span> <span class="t-cmd">pyahu init --preset platform</span>
@@ -61,12 +59,11 @@ kafka-connect  <span class="t-ok">ready</span>   http://localhost:8083</code></p
     </div>
   </section>
 
-  <div class="principles-strip"><div class="container">{x.strip.map((item, i) => <span><Icon name={(["contract", "layers", "review"] as const)[i]} size={18} />{item}</span>)}</div></div>
-
   <section class="section steps-section" id="quickstart" aria-labelledby="steps-title">
     <div class="section-heading">
       <p class="eyebrow">{t.steps.eyebrow}</p>
       <h2 id="steps-title">{t.steps.title}</h2><p class="section-lead">{x.requirement}</p>
+      <ul class="workflow-principles">{x.principles.map((item, i) => <li><Icon name={(["contract", "layers", "review"] as const)[i]} size={18} />{item}</li>)}</ul>
     </div>
     <div class="steps-grid">
       {
