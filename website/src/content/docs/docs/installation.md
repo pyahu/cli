@@ -154,4 +154,4 @@ pyahu init --preset platform
 pyahu up
 ```
 
-See the full walkthrough in [Overview](/en/docs/).
+See the full walkthrough in [Overview](/docs/).

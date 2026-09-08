@@ -404,7 +404,7 @@ pyahu certs trust
 pyahu up
 ```
 
-More context in [Local certificates](/en/docs/certificados).
+More context in [Local certificates](/docs/certificates).
 
 ---
 

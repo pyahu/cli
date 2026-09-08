@@ -1,33 +1,33 @@
 ---
-title: Backup e restore
-description: Como gerar dumps do PostgreSQL local e restaurar arquivos locais ou S3.
+title: Backup and restore
+description: How to generate dumps of the local PostgreSQL and restore local or S3 files.
 ---
 
-Backup e restore são comandos, não configuração YAML. O objetivo é ser direto: tirar um dump real do banco no cluster local para o disco do host e restaurar quando necessário.
+Backup and restore are commands, not YAML configuration. The goal is to be direct: take a real database dump from the local cluster to the host disk and restore it when needed.
 
-## Backup local
+## Local backup
 
 ```bash
 pyahu backup postgres app --dir ./backups
 ```
 
-A CLI executa `pg_dump --format=custom --no-owner --no-acl` no pod primário do PostgreSQL e grava um arquivo `.dump` no diretório informado.
+The CLI runs `pg_dump --format=custom --no-owner --no-acl` on the primary PostgreSQL pod and writes a `.dump` file to the provided directory.
 
-## Restore local
+## Local restore
 
 ```bash
 pyahu restore postgres app --source ./backups/pyahu-local-app-20260622-131500.dump --yes
 ```
 
-O restore usa `pg_restore`. Por padrão, operações destrutivas pedem confirmação; em scripts, passe `--yes` intencionalmente.
+The restore uses `pg_restore`. By default, destructive operations ask for confirmation; in scripts, pass `--yes` intentionally.
 
-## Restore a partir de S3
+## Restore from S3
 
 ```bash
 pyahu restore postgres app --source s3://my-bucket/dev/app.dump --yes
 ```
 
-Para provedores compatíveis com S3, informe o endpoint:
+For S3-compatible providers, provide the endpoint:
 
 ```bash
 pyahu restore postgres app \
@@ -36,13 +36,13 @@ pyahu restore postgres app \
   --yes
 ```
 
-O download usa `aws s3 cp` no host quando a origem começa com `s3://`.
+The download uses `aws s3 cp` on the host when the source starts with `s3://`.
 
-## Teste rápido
+## Quick test
 
 ```bash
 pyahu backup postgres app --dir ./backups
 pyahu restore postgres app --source "$(ls -t ./backups/*.dump | head -1)" --yes
 ```
 
-Guarde dumps fora de `.pyahu/local`. O diretório `.pyahu/local` é estado gerado e pode ser removido junto com testes locais.
+Keep dumps outside `.pyahu/local`. The `.pyahu/local` directory is generated state and can be removed together with local tests.

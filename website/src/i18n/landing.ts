@@ -165,7 +165,7 @@ export const ui = {
         go: "# requires Go 1.26+",
         release: "# download the release tarball and extract it",
       },
-      foot: 'Details, verification and shell completion in <a href="$DOCS/instalacao">Installation</a>.',
+      foot: 'Details, verification and shell completion in <a href="$DOCS/installation">Installation</a>.',
     },
     tls: {
       eyebrow: "localhost with TLS",

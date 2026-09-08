@@ -1,22 +1,15 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Icon from "./Icon.astro";
-import { ui, experience, type Lang } from "../i18n/landing";
+import { ui, experience } from "../i18n/landing";
 
-interface Props {
-  lang: Lang;
-}
-
-const { lang } = Astro.props;
-const t = ui[lang];
-const x = experience[lang];
-
-const base = lang === "en" ? "/en" : "";
-const docs = `${base}/docs`;
+const t = ui.en;
+const x = experience.en;
+const docs = "/docs";
 const installFoot = t.install.foot.replace("$DOCS", docs);
 ---
 
-<BaseLayout lang={lang} title={t.meta.title} description={t.meta.description} current="home">
+<BaseLayout title={t.meta.title} description={t.meta.description} current="home">
   <section class="hero">
 
     <div class="hero-grid">
@@ -25,7 +18,7 @@ const installFoot = t.install.foot.replace("$DOCS", docs);
         <h1>{t.hero.titleLead} <span>{t.hero.titleAccent}</span></h1>
         <p class="hero-copy">{t.hero.copy}</p>
         <div class="hero-actions">
-          <a class="button primary" href="#instalar">{t.hero.ctaStart}<Icon name="arrow" size={18} /></a>
+          <a class="button primary" href="#install">{t.hero.ctaStart}<Icon name="arrow" size={18} /></a>
           <a class="hero-docs" href={docs}>{t.hero.ctaCommands}<Icon name="arrow" size={16} /></a>
         </div>
       </div>
@@ -85,7 +78,7 @@ configmap/rabbitmq-config
 secret/pyahu-local-tls  <span class="t-dim">kubernetes.io/tls</span></code></pre>
   </section>
 
-  <section class="section install-section" id="instalar" aria-labelledby="install-title">
+  <section class="section install-section" id="install" aria-labelledby="install-title">
     <div class="section-heading">
       <p class="eyebrow">{t.install.eyebrow}</p>
       <h2 id="install-title">{t.install.title}</h2>
@@ -121,7 +114,7 @@ secret/pyahu-local-tls  <span class="t-dim">kubernetes.io/tls</span></code></pre
       <p class="eyebrow">{t.tls.eyebrow}</p>
       <h2 id="tls-title">{t.tls.title}</h2>
       <p set:html={t.tls.copy} />
-      <a class="text-link" href={`${docs}/certificados`}>{t.tls.link}</a>
+      <a class="text-link" href={`${docs}/certificates`}>{t.tls.link}</a>
     </div>
     <pre class="code-panel"><code><span class="t-prompt">$</span> pyahu certs status
 <span class="t-dim">CA status:  </span> <span class="t-ok">valid</span>
@@ -189,16 +182,16 @@ secret/pyahu-local-tls  <span class="t-dim">kubernetes.io/tls</span></code></pre
         ))
       }
     </div>
-    <a class="button secondary command-cta" href={`${docs}/comandos`}>{t.commands.cta}</a>
+    <a class="button secondary command-cta" href={`${docs}/commands`}>{t.commands.cta}</a>
   </section>
 
-  <section class="ecosystem-section"><div class="container ecosystem-layout"><div><p class="eyebrow">{x.ecosystem.eyebrow}</p><h2>{x.ecosystem.title}</h2><p>{x.ecosystem.body}</p><a class="text-link" href={lang === "en" ? "https://pyahu.io" : "https://pyahu.io/pt"}>{x.ecosystem.action}<Icon name="arrow" size={18} /></a></div><div class="ecosystem-flow"><a href="https://github.com/pyahu/toolchain"><Icon name="code" /><span><small>{x.ecosystem.prepare}</small>Pyahu Toolchain</span><Icon name="arrow" size={16} /></a><div class="ecosystem-current"><Icon name="terminal" /><span><small>{x.ecosystem.local}</small>Pyahu CLI</span></div><a href={lang === "en" ? "https://pyahu.io/#adoption" : "https://pyahu.io/pt#adoption"}><Icon name="layers" /><span><small>{x.ecosystem.operate}</small>Foundation + Cloud</span><Icon name="arrow" size={16} /></a><p>{x.ecosystem.soon}</p></div></div></section>
+  <section class="ecosystem-section"><div class="container ecosystem-layout"><div><p class="eyebrow">{x.ecosystem.eyebrow}</p><h2>{x.ecosystem.title}</h2><p>{x.ecosystem.body}</p><a class="text-link" href="https://pyahu.io">{x.ecosystem.action}<Icon name="arrow" size={18} /></a></div><div class="ecosystem-flow"><a href="https://github.com/pyahu/toolchain"><Icon name="code" /><span><small>{x.ecosystem.prepare}</small>Pyahu Toolchain</span><Icon name="arrow" size={16} /></a><div class="ecosystem-current"><Icon name="terminal" /><span><small>{x.ecosystem.local}</small>Pyahu CLI</span></div><a href="https://pyahu.io/#adoption"><Icon name="layers" /><span><small>{x.ecosystem.operate}</small>Foundation + Cloud</span><Icon name="arrow" size={16} /></a><p>{x.ecosystem.soon}</p></div></div></section>
 
   <section class="final-cta" aria-labelledby="final-title">
     <p class="eyebrow">{t.finalCta.eyebrow}</p>
     <h2 id="final-title">{t.finalCta.title}</h2>
     <div class="hero-actions center">
-      <a class="button primary" href={`${docs}/instalacao`}>{t.finalCta.ctaInstall}</a>
+      <a class="button primary" href={`${docs}/installation`}>{t.finalCta.ctaInstall}</a>
       <a class="button secondary" href={docs}>{t.finalCta.ctaDocs}</a>
     </div>
   </section>

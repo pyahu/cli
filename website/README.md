@@ -1,7 +1,7 @@
 # Pyahu CLI website
 
-The product website and Starlight documentation for https://cli.pyahu.io.
-Portuguese at `/`, English at `/en/`; documentation at `/docs/` and `/en/docs/`.
+The English-only product website and Starlight documentation for https://cli.pyahu.io.
+The landing page is at `/` and documentation is at `/docs/`.
 
 ```sh
 cd website
@@ -23,7 +23,7 @@ section; the hero has one primary install action and a secondary documentation l
 - `src/components/Landing.astro`: product page, keyboard-operable installation
   tabs and clipboard button with success/failure feedback.
 - `src/layouts/BaseLayout.astro`: navigation, mobile menu, language links and SEO.
-- `src/i18n/landing.ts`: Portuguese and English copy.
+- `src/i18n/landing.ts`: landing-page copy; only the English entry is rendered.
 - `src/styles/global.css`: responsive marketing design.
 - `src/styles/starlight.css`: documentation theme; existing content, search,
   language selection and light/dark modes are preserved.

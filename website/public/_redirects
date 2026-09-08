@@ -1,0 +1,6 @@
+/en/ / 301
+/en/docs/* /docs/:splat 301
+/docs/instalacao /docs/installation 301
+/docs/comandos /docs/commands 301
+/docs/configuracao /docs/configuration 301
+/docs/certificados /docs/certificates 301

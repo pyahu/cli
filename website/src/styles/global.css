@@ -29,13 +29,11 @@ pre { margin:0; overflow-x:auto; font-size:.8rem; line-height:1.9; tab-size:2; }
 .brand { display:flex; align-items:center; gap:.55rem; font-size:1.7rem; font-weight:600; letter-spacing:-.06em; }
 .brand-divider { color:#4a6080; font-weight:400; margin-inline:.7rem; }
 .brand-product { font:400 .95rem var(--font-mono); color:var(--cli-accent); letter-spacing:-.025em; }
-.desktop-nav,.header-actions,.lang-switch { display:flex; align-items:center; gap:1.7rem; }
+.desktop-nav,.header-actions { display:flex; align-items:center; gap:1.7rem; }
 .desktop-nav { font-size:.875rem; color:#acbbcc; }
+.desktop-nav a { display:inline-flex; align-items:center; gap:.35rem; }
 .desktop-nav a:hover,.footer-links a:hover,.text-link:hover { color:var(--blue); }
 .header-actions { gap:1.25rem; }
-.lang-switch { font:.75rem var(--font-mono); gap:.5rem; color:#8fa4be; }
-.lang-switch a { padding-block:.8rem; }
-.lang-switch a[aria-current] { color:white; }
 .nav-cta { display:flex; align-items:center; gap:1.1rem; border:1px solid #3a526e; border-radius:5px; padding:.55rem .9rem; font-size:.875rem; }
 .nav-cta:hover { background:#14283f; }
 .mobile-menu { display:none; }
