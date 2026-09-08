@@ -1,0 +1,23 @@
+---
+interface Props {
+  name: "arrow" | "code" | "check" | "review" | "contract" | "gate" | "retry" | "layers" | "route" | "shield" | "terminal";
+  size?: number;
+}
+const { name, size = 20 } = Astro.props;
+const paths: Record<Props["name"], string[]> = {
+  arrow: ["M7 17 17 7M7 7h10v10"],
+  code: ["m8 7-5 5 5 5m8-10 5 5-5 5M14 4l-4 16"],
+  check: ["M9 12l2 2 4-4", "M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"],
+  review: ["M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z", "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"],
+  contract: ["M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z", "M14 3v5h5M9 12h6M9 16h4"],
+  gate: ["M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M2 21h20M12 10v4M12 6v.01"],
+  retry: ["M3 10a9 9 0 1 1 1 7M3 4v6h6"],
+  layers: ["m12 3 10 5-10 5L2 8l10-5ZM2 12l10 5 10-5M2 16l10 5 10-5"],
+  route: ["M5 4v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4M12 12v8M2 4h6M16 4h6M9 20h6"],
+  shield: ["M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z", "M9 11h6v5H9v-5ZM10 11V9a2 2 0 0 1 4 0v2"],
+  terminal: ["M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z", "m7 9 3 3-3 3m6 0h4"],
+};
+---
+<svg class="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  {paths[name].map((d) => <path d={d} />)}
+</svg>

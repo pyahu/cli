@@ -8,16 +8,16 @@ type CommandGroup = { title: string; items: string[] };
 export const ui = {
   "pt-BR": {
     meta: {
-      title: "Pyahu CLI",
+      title: "Pyahu CLI | Sua stack local. Pronta para desenvolver.",
       description:
         "Uma CLI para subir Postgres, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect, Debezium e Kafka UI em k3d com TLS local.",
     },
     nav: { home: "Início", docs: "Documentação" },
     hero: {
       eyebrow: "infra local para desenvolvimento",
-      titleLead: "Sua stack local em",
-      titleAccent: "um só comando.",
-      copy: "Pyahu CLI provisiona PostgreSQL, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect, Debezium e Kafka UI em um cluster k3d, com TLS local e endpoints previsíveis. Sem transformar o setup em um projeto paralelo.",
+      titleLead: "Sua stack local.",
+      titleAccent: "Pronta para desenvolver.",
+      copy: "Banco de dados, identidade e mensageria em um cluster Kubernetes na sua máquina. Uma stack reproduzível para desenvolver, integrar e validar — sem transformar o setup em um projeto paralelo.",
       ctaStart: "Começar agora",
       ctaCommands: "Ver comandos",
       meta: "macOS e Linux · requer Docker ou Podman + k3d",
@@ -32,7 +32,7 @@ export const ui = {
     services: {
       eyebrow: "o que sobe",
       title: "Sete serviços, prontos para desenvolver e testar.",
-      lead: "Tudo roda local em k3d. Os endpoints batem com o que os apps já esperam: convenção sobre configuração, sem reconfigurar nada.",
+      lead: "Escolha os serviços no pyahu.yaml e conecte sua aplicação aos endpoints locais. Tudo roda em k3d, com configuração versionável e recursos que você pode inspecionar.",
       items: [
         { name: "PostgreSQL", role: "Banco relacional primário, com réplicas de leitura opcionais.", endpoint: "localhost:5432", accent: "brand" },
         { name: "ZITADEL", role: "Identidade e OIDC em HTTPS local, sem CA pública.", endpoint: "zitadel.localhost", accent: "indigo" },
@@ -45,8 +45,8 @@ export const ui = {
     },
     platform: {
       eyebrow: "plataforma pyahu",
-      title: "Kubernetes de verdade, não uma abstração.",
-      copy: "A Pyahu CLI é a porta de entrada local para a <strong>Plataforma Pyahu</strong>: um subconjunto fiel da experiência real, rodando na sua máquina. É k3d/k3s de verdade, com Traefik, PersistentVolumes, ConfigMaps e Secrets. A CLI não esconde o Kubernetes do dev. Ela só facilita o provisionamento e a operação, e o cluster continua seu para inspecionar quando quiser.",
+      title: "A simplicidade de uma CLI.\nO controle do Kubernetes.",
+      copy: "A CLI cuida do provisionamento e da operação da stack local. Por baixo, você encontra <strong>k3d/k3s, Traefik e recursos Kubernetes</strong>: volumes, ConfigMaps e Secrets. Use os comandos da Pyahu no dia a dia e inspecione o cluster quando precisar.",
       link: "Conheça a stack local →",
     },
     steps: {
@@ -61,7 +61,7 @@ export const ui = {
     install: {
       eyebrow: "instalação",
       title: "Escolha como instalar a CLI.",
-      lead: "Binário único, sem runtime. Releases assinadas no GitHub para macOS, Linux e Windows.",
+      lead: "Binário único, sem runtime. Releases no GitHub para macOS, Linux e Windows.",
       comments: {
         script: "# macOS e Linux · instala em /usr/local/bin",
         go: "# requer Go 1.26+",
@@ -120,16 +120,16 @@ export const ui = {
 
   en: {
     meta: {
-      title: "Pyahu CLI",
+      title: "Pyahu CLI | Your local stack. Ready to build.",
       description:
         "A CLI to spin up Postgres, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect, Debezium and Kafka UI on k3d with local TLS.",
     },
     nav: { home: "Home", docs: "Documentation" },
     hero: {
       eyebrow: "local infrastructure for development",
-      titleLead: "Your local stack in",
-      titleAccent: "a single command.",
-      copy: "Pyahu CLI provisions PostgreSQL, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect, Debezium and Kafka UI on a k3d cluster, with local TLS and predictable endpoints. Without turning your setup into a side project.",
+      titleLead: "Your local stack.",
+      titleAccent: "Ready to build.",
+      copy: "Databases, identity and messaging in a Kubernetes cluster on your machine. A reproducible stack to develop, integrate and validate — without turning setup into a side project.",
       ctaStart: "Get started",
       ctaCommands: "See commands",
       meta: "macOS and Linux · requires Docker or Podman + k3d",
@@ -144,7 +144,7 @@ export const ui = {
     services: {
       eyebrow: "what runs",
       title: "Seven services, ready to build and test.",
-      lead: "Everything runs locally on k3d. The endpoints match what apps already expect: convention over configuration, with nothing to reconfigure.",
+      lead: "Choose services in pyahu.yaml and connect your application to their local endpoints. Everything runs on k3d, with versionable configuration and resources you can inspect.",
       items: [
         { name: "PostgreSQL", role: "Primary relational database, with optional read replicas.", endpoint: "localhost:5432", accent: "brand" },
         { name: "ZITADEL", role: "Identity and OIDC over local HTTPS, no public CA.", endpoint: "zitadel.localhost", accent: "indigo" },
@@ -157,8 +157,8 @@ export const ui = {
     },
     platform: {
       eyebrow: "pyahu platform",
-      title: "Real Kubernetes, not an abstraction.",
-      copy: "Pyahu CLI is the local on-ramp to the <strong>Pyahu Platform</strong>: a faithful subset of the real experience, running on your machine. It is real k3d/k3s, with Traefik, PersistentVolumes, ConfigMaps and Secrets. The CLI does not hide Kubernetes from the developer. It just makes provisioning and operation easier, and the cluster stays yours to inspect whenever you want.",
+      title: "The simplicity of a CLI.\nThe control of Kubernetes.",
+      copy: "The CLI handles local stack provisioning and operation. Underneath, you have <strong>k3d/k3s, Traefik and Kubernetes resources</strong>: volumes, ConfigMaps and Secrets. Use Pyahu commands every day and inspect the cluster whenever you need to.",
       link: "Explore the local stack →",
     },
     steps: {
@@ -173,7 +173,7 @@ export const ui = {
     install: {
       eyebrow: "installation",
       title: "Choose how to install the CLI.",
-      lead: "A single binary, no runtime. Signed releases on GitHub for macOS, Linux and Windows.",
+      lead: "A single binary, no runtime. Releases on GitHub for macOS, Linux and Windows.",
       comments: {
         script: "# macOS and Linux · installs to /usr/local/bin",
         go: "# requires Go 1.26+",
@@ -230,3 +230,22 @@ export const ui = {
     },
   },
 } satisfies Record<Lang, unknown>;
+
+export const experience = {
+  "pt-BR": {
+    menu: "Menu", services: "A stack", workflow: "Como funciona", install: "Instalar", platform: "Pyahu Platform",
+    sample: "EXEMPLO DE SESSÃO LOCAL", open: "COMMUNITY · OPEN SOURCE", ready: "Seu ambiente de desenvolvimento, sob seu controle.",
+    strip: ["Configuração versionável", "Serviços reais, localmente", "Kubernetes inspecionável"],
+    copy: "Copiar comando", copied: "Copiado!", copyError: "Selecione o comando para copiar.",
+    ecosystem: { eyebrow: "PARTE DA PYAHU PLATFORM", title: "O caminho para produção\ncomeça na sua máquina.", body: "A CLI é a base local da suíte Pyahu. Prepare as ferramentas com a Toolchain, desenvolva e valide com a CLI e evolua para a infraestrutura que seu time precisa.", action: "Conheça a plataforma", local: "Desenvolva e valide", prepare: "Prepare o ambiente", operate: "Evolua a operação", soon: "AI Factory e Initializer · Em breve" },
+    release: "Baixar no GitHub", requirement: "Antes de começar: Docker ou Podman em execução e k3d no PATH.",
+  },
+  en: {
+    menu: "Menu", services: "The stack", workflow: "How it works", install: "Install", platform: "Pyahu Platform",
+    sample: "EXAMPLE LOCAL SESSION", open: "COMMUNITY · OPEN SOURCE", ready: "Your development environment, under your control.",
+    strip: ["Versionable configuration", "Real services, locally", "Inspectable Kubernetes"],
+    copy: "Copy command", copied: "Copied!", copyError: "Select the command to copy it.",
+    ecosystem: { eyebrow: "PART OF PYAHU PLATFORM", title: "The path to production\nstarts on your machine.", body: "The CLI is the local foundation of the Pyahu suite. Prepare your tools with Toolchain, develop and validate with the CLI, and grow into the infrastructure your team needs.", action: "Explore the platform", local: "Develop and validate", prepare: "Prepare your tools", operate: "Grow your operations", soon: "AI Factory and Initializer · Coming soon" },
+    release: "Download on GitHub", requirement: "Before you start: Docker or Podman running and k3d on your PATH.",
+  },
+};
