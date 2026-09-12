@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/pyahu/cli/pkg/schema"
@@ -69,12 +70,12 @@ func (r Runtime) Create(ctx context.Context, stack *schema.Stack, stackDir strin
 		return false, err
 	}
 	if exists {
-		missing, err := missingDesiredPorts(configPath, configData)
+		drift, err := configurationDrift(configPath, configData)
 		if err != nil {
 			return false, err
 		}
-		if len(missing) > 0 {
-			return false, fmt.Errorf("k3d cluster %s exists without required host port mappings %s; run `pyahu down` and then `pyahu up` to recreate the cluster", stack.Cluster.Name, strings.Join(missing, ", "))
+		if len(drift) > 0 {
+			return false, fmt.Errorf("k3d cluster %s does not match the current stack (%s); run `pyahu down` and then `pyahu up` to recreate the cluster", stack.Cluster.Name, strings.Join(drift, ", "))
 		}
 		return false, nil
 	}
@@ -126,7 +127,7 @@ func (r Runtime) Kubeconfig(ctx context.Context, name string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func missingDesiredPorts(existingConfigPath string, desiredData []byte) ([]string, error) {
+func configurationDrift(existingConfigPath string, desiredData []byte) ([]string, error) {
 	existingData, err := os.ReadFile(existingConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -142,17 +143,44 @@ func missingDesiredPorts(existingConfigPath string, desiredData []byte) ([]strin
 	if err := yaml.Unmarshal(desiredData, &desired); err != nil {
 		return nil, fmt.Errorf("parse desired k3d config: %w", err)
 	}
-	existingPorts := map[string]bool{}
-	for _, port := range existing.Ports {
-		existingPorts[port.Port] = true
+
+	drift := []string{}
+	if existing.APIVersion != desired.APIVersion {
+		drift = append(drift, fmt.Sprintf("apiVersion %q -> %q", existing.APIVersion, desired.APIVersion))
 	}
-	missing := []string{}
+	if existing.Kind != desired.Kind {
+		drift = append(drift, fmt.Sprintf("kind %q -> %q", existing.Kind, desired.Kind))
+	}
+	if existing.Metadata.Name != desired.Metadata.Name {
+		drift = append(drift, fmt.Sprintf("name %q -> %q", existing.Metadata.Name, desired.Metadata.Name))
+	}
+	if existing.Servers != desired.Servers {
+		drift = append(drift, fmt.Sprintf("servers %d -> %d", existing.Servers, desired.Servers))
+	}
+	if existing.Agents != desired.Agents {
+		drift = append(drift, fmt.Sprintf("agents %d -> %d", existing.Agents, desired.Agents))
+	}
+	if existing.Image != desired.Image {
+		drift = append(drift, fmt.Sprintf("image %q -> %q", existing.Image, desired.Image))
+	}
+	if existing.Network != desired.Network {
+		drift = append(drift, fmt.Sprintf("network %q -> %q", existing.Network, desired.Network))
+	}
+	if !reflect.DeepEqual(existing.Volumes, desired.Volumes) {
+		drift = append(drift, "persistent volume mapping changed")
+	}
+
+	existingPorts := map[string]portMapping{}
+	for _, port := range existing.Ports {
+		existingPorts[port.Port] = port
+	}
 	for _, port := range desired.Ports {
-		if !existingPorts[port.Port] {
-			missing = append(missing, port.Port)
+		existingPort, ok := existingPorts[port.Port]
+		if !ok || !reflect.DeepEqual(existingPort.NodeFilters, port.NodeFilters) {
+			drift = append(drift, "missing port "+port.Port)
 		}
 	}
-	return missing, nil
+	return drift, nil
 }
 
 func ConfigPath(stackDir string) string {

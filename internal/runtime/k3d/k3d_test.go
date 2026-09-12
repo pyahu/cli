@@ -101,7 +101,7 @@ func TestRenderConfigOmitsZitadelHTTPSPortWhenLocalTLSDisabled(t *testing.T) {
 	}
 }
 
-func TestMissingDesiredPortsDetectsNewHostPort(t *testing.T) {
+func TestConfigurationDriftDetectsNewHostPort(t *testing.T) {
 	dir := t.TempDir()
 	existingPath := filepath.Join(dir, "k3d.yaml")
 	existing := []byte(`apiVersion: k3d.io/v1alpha5
@@ -119,16 +119,16 @@ ports:
   - port: 8443:443
 `)
 
-	missing, err := missingDesiredPorts(existingPath, desired)
+	drift, err := configurationDrift(existingPath, desired)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(missing) != 1 || missing[0] != "8443:443" {
-		t.Fatalf("missing ports = %#v", missing)
+	if len(drift) != 1 || drift[0] != "missing port 8443:443" {
+		t.Fatalf("configuration drift = %#v", drift)
 	}
 }
 
-func TestMissingDesiredPortsAllowsExistingExtraPorts(t *testing.T) {
+func TestConfigurationDriftAllowsExistingExtraPorts(t *testing.T) {
 	dir := t.TempDir()
 	existingPath := filepath.Join(dir, "k3d.yaml")
 	existing := []byte(`apiVersion: k3d.io/v1alpha5
@@ -146,16 +146,16 @@ ports:
   - port: 8080:80
 `)
 
-	missing, err := missingDesiredPorts(existingPath, desired)
+	drift, err := configurationDrift(existingPath, desired)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(missing) != 0 {
-		t.Fatalf("missing ports = %#v", missing)
+	if len(drift) != 0 {
+		t.Fatalf("configuration drift = %#v", drift)
 	}
 }
 
-func TestMissingDesiredPortsRejectsUnboundExistingMapping(t *testing.T) {
+func TestConfigurationDriftRejectsUnboundExistingMapping(t *testing.T) {
 	dir := t.TempDir()
 	existingPath := filepath.Join(dir, "k3d.yaml")
 	existing := []byte(`apiVersion: k3d.io/v1alpha5
@@ -172,12 +172,87 @@ ports:
   - port: 127.0.0.1:5432:30543
 `)
 
-	missing, err := missingDesiredPorts(existingPath, desired)
+	drift, err := configurationDrift(existingPath, desired)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(missing) != 1 || missing[0] != "127.0.0.1:5432:30543" {
-		t.Fatalf("missing ports = %#v", missing)
+	if len(drift) != 1 || drift[0] != "missing port 127.0.0.1:5432:30543" {
+		t.Fatalf("configuration drift = %#v", drift)
+	}
+}
+
+func TestConfigurationDriftDetectsImmutableClusterChanges(t *testing.T) {
+	dir := t.TempDir()
+	existingPath := filepath.Join(dir, "k3d.yaml")
+	existing := []byte(`apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: demo
+servers: 1
+agents: 0
+image: rancher/k3s:v1.35.8-k3s1
+network: demo-net
+volumes:
+  - volume: /old/storage:/var/lib/rancher/k3s/storage
+    nodeFilters: ["server:*"]
+`)
+	if err := os.WriteFile(existingPath, existing, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	desired := []byte(`apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: demo
+servers: 2
+agents: 1
+image: rancher/k3s:v1.36.4-k3s1
+network: replacement-net
+volumes:
+  - volume: /new/storage:/var/lib/rancher/k3s/storage
+    nodeFilters: ["server:*"]
+`)
+
+	drift, err := configurationDrift(existingPath, desired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"servers 1 -> 2",
+		"agents 0 -> 1",
+		`image "rancher/k3s:v1.35.8-k3s1" -> "rancher/k3s:v1.36.4-k3s1"`,
+		`network "demo-net" -> "replacement-net"`,
+		"persistent volume mapping changed",
+	}
+	if strings.Join(drift, "|") != strings.Join(want, "|") {
+		t.Fatalf("configuration drift = %#v, want %#v", drift, want)
+	}
+}
+
+func TestConfigurationDriftDetectsChangedPortNodeFilter(t *testing.T) {
+	dir := t.TempDir()
+	existingPath := filepath.Join(dir, "k3d.yaml")
+	existing := []byte(`apiVersion: k3d.io/v1alpha5
+kind: Simple
+ports:
+  - port: 127.0.0.1:5432:30543
+    nodeFilters: ["loadbalancer"]
+`)
+	if err := os.WriteFile(existingPath, existing, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	desired := []byte(`apiVersion: k3d.io/v1alpha5
+kind: Simple
+ports:
+  - port: 127.0.0.1:5432:30543
+    nodeFilters: ["server:0"]
+`)
+
+	drift, err := configurationDrift(existingPath, desired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(drift) != 1 || drift[0] != "missing port 127.0.0.1:5432:30543" {
+		t.Fatalf("configuration drift = %#v", drift)
 	}
 }
 
