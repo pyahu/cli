@@ -75,12 +75,17 @@ cluster:    pyahu-local
 namespace:  pyahu-local-dev
 kubeconfig: /home/voce/.config/k3d/kubeconfig-pyahu-local.yaml
 
-POSTGRES_URL                 postgresql://pyahu:pyahu_local@localhost:5432/app?sslmode=disable
+POSTGRES_URL                 postgresql://pyahu:hidden@localhost:5432/app?sslmode=disable
+POSTGRES_PASSWORD            <hidden>
 ZITADEL_ISSUER               https://zitadel.localhost
 ...
 
 next: eval "$(pyahu env)"
 ```
+
+The `up` summary redacts passwords, tokens, private keys, and credentials inside
+URLs in both human and JSON output. Use the explicit `pyahu env` command when an
+application needs the real connection values.
 
 :::caution
 Changing host ports after the cluster exists requires recreating the cluster. k3d fixes the

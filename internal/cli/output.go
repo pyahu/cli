@@ -75,13 +75,14 @@ func checkMark(check doctor.Check) string {
 }
 
 func (a *app) printSummary(stack *schema.Stack, kubeconfig string, warnings []string) error {
+	env := redactedConnectionEnv(stack)
 	if a.opts.output == "json" {
 		return writeJSON(a.opts.out, map[string]any{
 			"cluster":    stack.Cluster.Name,
 			"namespace":  stack.Cluster.Namespace,
 			"kubeconfig": kubeconfig,
 			"services":   stack.EnabledServices(),
-			"env":        stack.ConnectionEnv(),
+			"env":        env,
 			"warnings":   warnings,
 		})
 	}
@@ -95,7 +96,6 @@ func (a *app) printSummary(stack *schema.Stack, kubeconfig string, warnings []st
 	a.info("%s%s", a.field("namespace:", 12, s.dim), stack.Cluster.Namespace)
 	a.info("%s%s", a.field("kubeconfig:", 12, s.dim), kubeconfig)
 	a.info("")
-	env := stack.ConnectionEnv()
 	keys := schema.SortedEnvKeys(env)
 	sort.Strings(keys)
 	for _, key := range keys {
@@ -104,6 +104,15 @@ func (a *app) printSummary(stack *schema.Stack, kubeconfig string, warnings []st
 	a.info("")
 	a.info("%s %s", s.dim("next:"), s.dim("eval \"$(pyahu env)\""))
 	return nil
+}
+
+func redactedConnectionEnv(stack *schema.Stack) map[string]string {
+	env := stack.ConnectionEnv()
+	redacted := make(map[string]string, len(env))
+	for key, value := range env {
+		redacted[key] = displayEnvValue(key, value, false)
+	}
+	return redacted
 }
 
 func clusterState(running bool) string {

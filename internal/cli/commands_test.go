@@ -400,6 +400,52 @@ func TestUpPrintsWarningsAndContinues(t *testing.T) {
 	}
 }
 
+func TestUpSummaryRedactsSecrets(t *testing.T) {
+	stackPath := writePresetStack(t, "minimal")
+	rt := &fakeRuntime{installed: true, exists: false, kubeconfig: "/tmp/kubeconfig"}
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+		a.deps.newKube = func(kubeconfig string) (localKube, error) { return fakeKube{}, nil }
+		a.deps.runDoctor = func(ctx context.Context, stack *schema.Stack, clusterExists bool) []doctor.Check {
+			return []doctor.Check{{Name: "k3d", OK: true, Message: "ok"}}
+		}
+	}
+
+	stdout, _, err := executeTestCommand(t, mutate, "--file", stackPath, "up", "--skip-wait", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(stdout, "pyahu_local") {
+		t.Fatalf("human up summary leaked a password:\n%s", stdout)
+	}
+	for _, want := range []string{
+		"POSTGRES_PASSWORD            <hidden>",
+		"postgresql://pyahu:hidden@localhost:5432/app?sslmode=disable",
+		"next: eval \"$(pyahu env)\"",
+	} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("human up summary does not contain %q:\n%s", want, stdout)
+		}
+	}
+
+	stdout, _, err = executeTestCommand(t, mutate, "--file", stackPath, "up", "--skip-wait", "--output", "json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Env map[string]string `json:"env"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Env["POSTGRES_PASSWORD"] != "<hidden>" {
+		t.Fatalf("POSTGRES_PASSWORD = %q", result.Env["POSTGRES_PASSWORD"])
+	}
+	if strings.Contains(result.Env["POSTGRES_URL"], "pyahu_local") {
+		t.Fatalf("POSTGRES_URL leaked a password: %q", result.Env["POSTGRES_URL"])
+	}
+}
+
 func TestServicesCommandJSON(t *testing.T) {
 	stackPath := writePresetStack(t, "platform")
 	rt := &fakeRuntime{installed: true, exists: true, kubeconfig: "/tmp/kubeconfig"}
