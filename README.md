@@ -29,8 +29,11 @@ brings up PostgreSQL, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect with Debezi
 and Kafka UI, with local TLS and predictable endpoints, and without turning your
 setup into a side project.
 
-It is intentionally lightweight: k3d plus generated resources. Normal operation
-does not require `kubectl` or `helm`.
+Its control layer is intentionally lightweight: k3d plus generated resources,
+without Helm releases or extra in-cluster operators. The complete platform
+preset still runs seven real services and therefore needs meaningful Docker
+resources; see the [resource guidance](https://cli.pyahu.io/docs/configuration#resource-requirements).
+Normal operation does not require `kubectl` or `helm`.
 
 ```console
 $ pyahu init --preset platform

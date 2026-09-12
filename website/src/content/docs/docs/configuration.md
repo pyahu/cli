@@ -88,6 +88,28 @@ You can set `cluster.k3sVersion` to another image tag when necessary, but
 versions outside that tested window are best effort. The default and the tested
 previous minor are updated as Kubernetes support moves forward.
 
+## Resource requirements
+
+The CLI and its generated control layer are lightweight, but the services are
+the real databases, brokers, and identity server. Their current configured
+resources are:
+
+| Preset | Pod CPU requests | Pod memory requests | Pod memory limits | Persistent storage |
+| --- | ---: | ---: | ---: | ---: |
+| `minimal` | 50m | 128Mi | 512Mi | 2Gi |
+| `platform` | 560m | 1,488Mi | 4,896Mi | 9Gi |
+
+These totals exclude k3s, Traefik, container images, build cache, and transient
+Jobs. Actual memory use is normally below the limits, but Docker must have room
+for bursts and Kubernetes system components. For the complete `platform`
+preset, start with at least 4 CPU cores, 8GiB of memory available to the
+container runtime, and 15GiB of free disk. The `minimal` PostgreSQL preset is the
+better starting point on constrained machines.
+
+Pyahu does not currently enforce host CPU, memory, or disk minimums in
+`doctor`; inspect the resources assigned to Docker Desktop, Colima, or your
+other container runtime if pods remain pending or are OOM-killed.
+
 Do not use `cluster.ports` in presets or new documentation. The CLI keeps silent compatibility with this legacy format, but it is not the v1 surface.
 
 :::caution[Upgrading from an old `pyahu.yaml`]

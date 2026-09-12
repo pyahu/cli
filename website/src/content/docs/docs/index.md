@@ -62,8 +62,10 @@ The HTTP UIs (ZITADEL, RabbitMQ, Kafka UI) go through Traefik on 80/443 with
 `*.localhost` hostnames and the local certificate. The TCP services (PostgreSQL,
 Kafka, RabbitMQ AMQP, Redis) and the Kafka Connect REST endpoint keep dedicated ports.
 
-The `minimal` preset spins up only PostgreSQL. See [Configuration](/docs/configuration) to
-adjust services, ports, and credentials.
+The `minimal` preset spins up only PostgreSQL. The complete preset runs seven
+real services; review its [resource requirements](/docs/configuration#resource-requirements)
+before using it on a constrained Docker VM. See [Configuration](/docs/configuration)
+to adjust services, ports, and credentials.
 
 ## Connect your apps
 
