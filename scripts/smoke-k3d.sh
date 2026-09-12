@@ -52,11 +52,8 @@ cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM
   set +e
-  "$pyahu_bin" --no-input --no-color --quiet --file "$stack_file" down >/dev/null 2>&1
+  "$pyahu_bin" --no-input --no-color --quiet --file "$stack_file" down --purge-data --yes >/dev/null 2>&1
   k3d cluster delete "$cluster_name" >/dev/null 2>&1
-  if [[ "$cluster_name" == pyahu-e2e-* ]]; then
-    rm -rf -- "${HOME:?}/.pyahu/clusters/$cluster_name"
-  fi
   rm -rf -- "$temp_dir"
   exit "$exit_code"
 }

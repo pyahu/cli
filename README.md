@@ -172,7 +172,8 @@ pyahu services                 # list services and endpoints
 pyahu connectors apply         # register connectors whose source needed the app to boot
 pyahu connectors status        # connector and task state; non-zero if any task is not RUNNING
 eval "$(pyahu env)"            # load connection env vars into your shell
-pyahu down                     # tear it all down
+pyahu down                     # remove the cluster and retain local data
+pyahu down --purge-data --yes  # also permanently remove retained local data
 ```
 
 The default stack file is `pyahu.yaml`, discovered from the current directory
@@ -182,10 +183,10 @@ command and flag.
 ## Documentation
 
 - [Overview & getting started](https://cli.pyahu.io/docs)
-- [Commands](https://cli.pyahu.io/docs/comandos)
-- [Configuration](https://cli.pyahu.io/docs/configuracao)
+- [Commands](https://cli.pyahu.io/docs/commands)
+- [Configuration](https://cli.pyahu.io/docs/configuration)
 - [Kafka Connect & Debezium](https://cli.pyahu.io/docs/kafka-connect-debezium)
-- [Local certificates](https://cli.pyahu.io/docs/certificados)
+- [Local certificates](https://cli.pyahu.io/docs/certificates)
 - [Backup & restore](https://cli.pyahu.io/docs/backup-restore)
 
 ## Scope

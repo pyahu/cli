@@ -100,7 +100,11 @@ Details in [Local certificates](/docs/certificates).
 ```bash
 pyahu down                 # removes the k3d cluster
 pyahu down --keep-cluster  # keeps the cluster and removes only the stack namespace
+pyahu down --purge-data --yes # also permanently removes retained local storage
 ```
+
+Plain `pyahu down` retains data under `~/.pyahu/clusters/<cluster>/storage` and
+prints that path. Use `--purge-data` only when the files are no longer needed.
 
 If you change ports after the cluster already exists, recreate it. k3d pins the port
 mappings at creation time:

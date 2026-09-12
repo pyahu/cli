@@ -449,6 +449,86 @@ func TestUpSummaryRedactsSecrets(t *testing.T) {
 	}
 }
 
+func TestDownPreservesDataByDefault(t *testing.T) {
+	stackPath := writePresetStack(t, "minimal")
+	rt := &fakeRuntime{exists: true}
+	removeCalled := false
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+		a.deps.removeAll = func(path string) error {
+			removeCalled = true
+			return nil
+		}
+	}
+
+	stdout, _, err := executeTestCommand(t, mutate, "--file", stackPath, "down", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rt.deleteCalled {
+		t.Fatal("cluster was not deleted")
+	}
+	if removeCalled {
+		t.Fatal("data was removed without --purge-data")
+	}
+	if !strings.Contains(stdout, "data retained at") {
+		t.Fatalf("retention path is not reported:\n%s", stdout)
+	}
+}
+
+func TestDownPurgesDataWithYes(t *testing.T) {
+	stackPath := writePresetStack(t, "minimal")
+	rt := &fakeRuntime{exists: true}
+	removedPath := ""
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+		a.deps.removeAll = func(path string) error {
+			removedPath = path
+			return nil
+		}
+	}
+
+	_, _, err := executeTestCommand(t, mutate, "--file", stackPath, "down", "--purge-data", "--yes", "--no-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rt.deleteCalled {
+		t.Fatal("cluster was not deleted")
+	}
+	wantSuffix := filepath.Join(".pyahu", "clusters", "pyahu-local", "storage")
+	if !strings.HasSuffix(removedPath, wantSuffix) {
+		t.Fatalf("removed path = %q, want suffix %q", removedPath, wantSuffix)
+	}
+}
+
+func TestDownPurgeRequiresExplicitNonInteractiveConfirmation(t *testing.T) {
+	stackPath := writePresetStack(t, "minimal")
+	rt := &fakeRuntime{exists: true}
+	mutate := func(a *app) {
+		a.deps.newRuntime = func(opts options) localRuntime { return rt }
+	}
+
+	_, _, err := executeTestCommand(t, mutate, "--file", stackPath, "--no-input", "down", "--purge-data")
+	if err == nil {
+		t.Fatal("expected confirmation error")
+	}
+	if !strings.Contains(err.Error(), "requires --yes") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rt.deleteCalled {
+		t.Fatal("cluster was deleted before purge confirmation")
+	}
+}
+
+func TestDownRejectsPurgeWhileKeepingCluster(t *testing.T) {
+	stackPath := writePresetStack(t, "minimal")
+
+	_, _, err := executeTestCommand(t, nil, "--file", stackPath, "down", "--keep-cluster", "--purge-data", "--yes")
+	if err == nil || !strings.Contains(err.Error(), "cannot combine") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestServicesCommandJSON(t *testing.T) {
 	stackPath := writePresetStack(t, "platform")
 	rt := &fakeRuntime{installed: true, exists: true, kubeconfig: "/tmp/kubeconfig"}

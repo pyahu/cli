@@ -55,6 +55,7 @@ type dependencies struct {
 	runDoctor     func(ctx context.Context, stack *schema.Stack, clusterExists bool) []doctor.Check
 	clusterExists func(ctx context.Context, stack *schema.Stack) bool
 	readFile      func(path string) ([]byte, error)
+	removeAll     func(path string) error
 
 	latestRelease   func(ctx context.Context) (string, error)
 	downloadRelease func(ctx context.Context, release update.Release) ([]byte, error)
@@ -133,6 +134,7 @@ func newApp(version string, commit string, date string, out io.Writer, err io.Wr
 			runDoctor:     doctor.Run,
 			clusterExists: doctor.ClusterExists,
 			readFile:      os.ReadFile,
+			removeAll:     os.RemoveAll,
 			latestRelease: func(ctx context.Context) (string, error) {
 				return update.New().Latest(ctx)
 			},

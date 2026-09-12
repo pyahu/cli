@@ -100,11 +100,19 @@ Removes the local Pyahu resources.
 | Flag | Default | Description |
 | --- | --- | --- |
 | `--keep-cluster` | `false` | Remove only the stack namespace and keep the k3d cluster. |
+| `--purge-data` | `false` | Permanently delete retained local storage after removing the cluster. |
+| `--yes` | `false` | Confirm `--purge-data` without an interactive prompt. |
 
 ```bash
 pyahu down                 # deletes the entire k3d cluster
 pyahu down --keep-cluster  # keeps the cluster, removes the namespace
+pyahu down --purge-data --yes # also permanently deletes retained local data
 ```
+
+By default, cluster data remains under `~/.pyahu/clusters/<cluster>/storage` so
+teardown never silently deletes host files. Pyahu prints the retained path.
+`--purge-data` is irreversible, cannot be combined with `--keep-cluster`, and
+requires confirmation; scripts and `--no-input` runs must pass `--yes`.
 
 ### `pyahu doctor`
 
