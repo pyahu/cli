@@ -74,7 +74,7 @@ func zitadelService(namespace string, serviceLabels map[string]string, selector 
 
 func zitadelDeployment(stack *schema.Stack, serviceLabels map[string]string, selector map[string]string, external zitadelExternal) *appsv1.Deployment {
 	namespace := stack.Cluster.Namespace
-	postgresDSN := fmt.Sprintf("postgresql://%s:%s@postgres.%s.svc.cluster.local:5432/zitadel?sslmode=disable", stack.PostgresUser(), stack.PostgresPassword(), namespace)
+	postgresDSN := stack.PostgresInternalURL("zitadel")
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "zitadel", Namespace: namespace, Labels: serviceLabels},
 		Spec: appsv1.DeploymentSpec{

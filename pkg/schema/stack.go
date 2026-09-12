@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -1012,11 +1013,11 @@ func (s *Stack) ConnectionEnv() map[string]string {
 		env["POSTGRES_DATABASE"] = db
 		env["POSTGRES_USER"] = s.PostgresUser()
 		env["POSTGRES_PASSWORD"] = s.PostgresPassword()
-		env["POSTGRES_URL"] = fmt.Sprintf("postgresql://%s:%s@localhost:%d/%s?sslmode=disable", s.PostgresUser(), s.PostgresPassword(), s.PostgresPort(), db)
+		env["POSTGRES_URL"] = s.postgresURL("localhost", s.PostgresPort(), db)
 		if s.PostgresReadReplicas() > 0 {
 			env["POSTGRES_READ_HOST"] = "localhost"
 			env["POSTGRES_READ_PORT"] = fmt.Sprintf("%d", s.PostgresReadPort())
-			env["POSTGRES_READ_URL"] = fmt.Sprintf("postgresql://%s:%s@localhost:%d/%s?sslmode=disable", s.PostgresUser(), s.PostgresPassword(), s.PostgresReadPort(), db)
+			env["POSTGRES_READ_URL"] = s.postgresURL("localhost", s.PostgresReadPort(), db)
 		}
 	}
 	if s.ZitadelEnabled() {
@@ -1031,7 +1032,7 @@ func (s *Stack) ConnectionEnv() map[string]string {
 		env["RABBITMQ_MANAGEMENT_URL"] = s.RabbitMQManagementExternalURL()
 		env["RABBITMQ_USER"] = s.RabbitMQUser()
 		env["RABBITMQ_PASSWORD"] = s.RabbitMQPassword()
-		env["RABBITMQ_URL"] = fmt.Sprintf("amqp://%s:%s@localhost:%d", s.RabbitMQUser(), s.RabbitMQPassword(), s.RabbitMQPort())
+		env["RABBITMQ_URL"] = credentialURL("amqp", s.RabbitMQUser(), s.RabbitMQPassword(), "localhost", s.RabbitMQPort(), "", "")
 	}
 	if s.RedisEnabled() {
 		env["REDIS_HOST"] = "localhost"
@@ -1049,6 +1050,27 @@ func (s *Stack) ConnectionEnv() map[string]string {
 		env["KAFKA_UI_URL"] = s.KafkaUIExternalURL()
 	}
 	return env
+}
+
+func (s *Stack) postgresURL(host string, port int, database string) string {
+	return credentialURL("postgresql", s.PostgresUser(), s.PostgresPassword(), host, port, database, "sslmode=disable")
+}
+
+func (s *Stack) PostgresInternalURL(database string) string {
+	return s.postgresURL(fmt.Sprintf("postgres.%s.svc.cluster.local", s.Cluster.Namespace), 5432, database)
+}
+
+func credentialURL(scheme string, username string, password string, host string, port int, pathValue string, rawQuery string) string {
+	value := &url.URL{
+		Scheme:   scheme,
+		User:     url.UserPassword(username, password),
+		Host:     net.JoinHostPort(host, fmt.Sprintf("%d", port)),
+		RawQuery: rawQuery,
+	}
+	if pathValue != "" {
+		value.Path = "/" + pathValue
+	}
+	return value.String()
 }
 
 func (s *Stack) ZitadelHTTPPort() int {
@@ -1134,7 +1156,7 @@ func (s *Stack) RedisInternalHost() string {
 
 func (s *Stack) RedisURL() string {
 	if password := s.RedisPassword(); password != "" {
-		return fmt.Sprintf("redis://:%s@localhost:%d", password, s.RedisPort())
+		return credentialURL("redis", "", password, "localhost", s.RedisPort(), "", "")
 	}
 	return fmt.Sprintf("redis://localhost:%d", s.RedisPort())
 }

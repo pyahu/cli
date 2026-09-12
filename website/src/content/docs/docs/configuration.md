@@ -143,5 +143,9 @@ The global file is loaded first; the project's `pyahu.yaml` overrides the values
 ## Local credentials
 
 PostgreSQL, Zitadel, and RabbitMQ credentials can live in the local `pyahu.yaml` or in the global config.
+Credentials embedded in PostgreSQL, RabbitMQ, and Redis connection URLs are
+percent-encoded, so passwords containing characters such as `@`, `:`, or `/`
+remain valid. The separate password environment variables retain their original
+unencoded values.
 
 For PostgreSQL, changing the password after the volume already exists updates the Secrets and the CLI output, but the user inside the database may keep the old password. For local rotation, recreate the cluster or alter the role inside PostgreSQL.
