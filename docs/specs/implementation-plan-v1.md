@@ -1,7 +1,13 @@
 # Pyahu CLI V1 Implementation Plan
 
-Status: draft
+Status: historical draft
 Date: 2026-06-21
+
+This is the original implementation plan. It intentionally retains target
+architecture and sequencing, but unchecked work must not be read as shipped
+behavior. The current user-facing docs are authoritative. As of 2026-09-12, the
+resource-capacity checks and persisted `state.json` fallback below are still
+planned; a real k3d lifecycle smoke test is shipped.
 
 ## Current Repository Gap
 
@@ -70,7 +76,7 @@ types that are safe to import.
    - Docker or Podman API available
    - k3d installed
    - default or configured ports free
-   - enough CPU, memory, and disk for enabled services
+   - enough CPU, memory, and disk for enabled services *(planned)*
 4. Render `.pyahu/local/k3d.yaml`.
 5. Create or reuse k3d cluster.
 6. Wait for Kubernetes API and node readiness.
@@ -83,11 +89,12 @@ types that are safe to import.
    - ZITADEL after PostgreSQL is ready
 10. Wait for readiness checks.
 11. Print connection summary.
-12. Persist local state under `.pyahu/local/state.json`.
+12. Persist local state under `.pyahu/local/state.json`. *(planned)*
 
 `pyahu down`:
 
-1. Load stack file or local state.
+1. Load stack file, or local state when persisted fallback is implemented.
+   *(state fallback planned)*
 2. If `--keep-cluster`, uninstall stack resources and keep the k3d cluster.
 3. Otherwise delete the Pyahu-owned k3d cluster.
 4. Remove `.pyahu/local/` state for the deleted cluster.
@@ -126,8 +133,9 @@ can be introduced when there is a second runtime or an operator-backed mode.
 - Generate k3d config from stack cluster settings.
 - Create, detect, reuse, and delete Pyahu-owned clusters.
 - Wait for Kubernetes API and node readiness.
-- Store local state in `.pyahu/local/state.json`.
-- Add integration tests gated behind an environment variable.
+- Store local state in `.pyahu/local/state.json`. *(planned)*
+- Add integration tests gated behind an environment variable. *(shipped as the
+  explicit and CI-scheduled real k3d lifecycle smoke test)*
 
 ### Milestone 4: Kubernetes Layer
 
@@ -179,8 +187,9 @@ ZITADEL local URL:
 
 Resource pressure:
 
-- Kafka plus ZITADEL can still be heavy. `doctor` must warn before the cluster
-  starts if container resources are too low.
+- Kafka plus ZITADEL can still be heavy. A future `doctor` capacity check should
+  warn before the cluster starts if container resources are too low. Current
+  requirements are documented but not automatically enforced.
 
 ## Open Decisions
 

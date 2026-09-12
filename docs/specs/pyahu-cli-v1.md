@@ -3,6 +3,20 @@
 Status: draft
 Date: 2026-06-22
 
+## Implementation Status
+
+This document describes the V1 target, not a guarantee that every paragraph is
+already shipped. The user-facing documentation under `website/src/content/docs`
+is authoritative for current behavior.
+
+As of 2026-09-12, `doctor` checks k3d, the Docker-compatible runtime, enabled
+host ports, host platform, and other local clusters. CPU, memory, disk, and
+Kubernetes API checks are planned; `up` performs the Kubernetes API wait after
+cluster provisioning. Persisted `state.json` fallback for lifecycle commands
+and newline-delimited progress events are also planned. Today, lifecycle
+commands load the stack file and JSON commands return a final structured
+document.
+
 ## Intent
 
 Pyahu CLI is the developer entry point into the Pyahu platform. The first
@@ -107,9 +121,9 @@ Command behavior:
 - `pyahu kubeconfig` prints the kubeconfig path or writes kubeconfig to stdout.
 - `pyahu down` deletes the Pyahu-owned k3d cluster by default.
 - `pyahu down --keep-cluster` removes stack resources but keeps the cluster.
-- `pyahu doctor` checks Docker or Podman, k3d, ports, CPU, memory, disk, and
-  Kubernetes API access. It also warns when other local Kubernetes clusters are
-  present.
+- `pyahu doctor` currently checks Docker or Podman, k3d, enabled host ports,
+  host platform, and other local Kubernetes clusters. CPU, memory, disk, and
+  Kubernetes API checks remain part of the V1 target.
 
 Exit codes:
 
@@ -193,13 +207,13 @@ service.failed
 summary.completed
 ```
 
-The human renderer turns events into compact progress lines and keeps long waits
-alive with useful state such as the pod phase, Kubernetes condition, image pull
-status, or last readiness message.
+The human renderer currently turns phases into compact progress lines. Enriching
+long waits with pod phase, Kubernetes condition, image-pull status, or the last
+readiness message remains planned.
 
-JSON output for long-running commands is newline-delimited JSON events. JSON
-output for state commands such as `status`, `doctor`, `env`, and `kubeconfig` is
-a single JSON document.
+Newline-delimited JSON events for long-running commands remain planned. Current
+JSON output is a single structured document, including state commands such as
+`status`, `doctor`, `env`, and `kubeconfig`.
 
 Color and animation are enabled only for interactive terminals and must respect
 `NO_COLOR`, `TERM=dumb`, and `--no-color`.
