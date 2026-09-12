@@ -21,7 +21,7 @@ curl -fsSL https://cli.pyahu.io/install.sh | sh
 Or with mise, which pins the version in the repository and keeps the whole team on it:
 
 ```bash
-mise use "github:pyahu/cli@0.7.0"
+mise use --pin "github:pyahu/cli@latest"
 ```
 
 Other methods (Pyahu toolchain, `go install`, manual download) and the prerequisites are in

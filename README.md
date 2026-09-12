@@ -94,11 +94,11 @@ Pinning the CLI next to the rest of a project's toolchain is the recommended way
 team gets the same version, and it is recorded in the repo.
 
 ```bash
-# in a project, writes to ./mise.toml
-mise use "github:pyahu/cli@0.7.0"
+# in a project, resolves latest and writes its exact version to ./mise.toml
+mise use --pin "github:pyahu/cli@latest"
 
 # or for your user, everywhere
-mise use -g "github:pyahu/cli@0.7.0"
+mise use -g --pin "github:pyahu/cli@latest"
 
 mise install
 ```
@@ -106,7 +106,7 @@ mise install
 ```toml
 # mise.toml
 [tools]
-"github:pyahu/cli" = "0.7.0"
+"github:pyahu/cli" = "<resolved-version>"
 ```
 
 ### Pyahu toolchain

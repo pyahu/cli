@@ -23,11 +23,11 @@ Pinning the CLI next to the rest of a project's toolchain keeps everyone on the 
 version, recorded in the repository:
 
 ```bash
-# in a project, writes to ./mise.toml
-mise use "github:pyahu/cli@0.7.0"
+# in a project, resolves latest and writes its exact version to ./mise.toml
+mise use --pin "github:pyahu/cli@latest"
 
 # or for your user, everywhere
-mise use -g "github:pyahu/cli@0.7.0"
+mise use -g --pin "github:pyahu/cli@latest"
 
 mise install
 ```
@@ -35,7 +35,7 @@ mise install
 ```toml
 # mise.toml
 [tools]
-"github:pyahu/cli" = "0.7.0"
+"github:pyahu/cli" = "<resolved-version>"
 ```
 
 mise's `github:` backend pulls the release from GitHub, verifies the artifact attestation, and
@@ -119,7 +119,7 @@ binary. If `pyahu` was installed by mise (or `go install`), it leaves the file a
 would be undone by the next `mise install` — and prints the right command instead:
 
 ```text
-error: this pyahu is managed by another tool; upgrade it with: mise use github:pyahu/cli@0.7.0
+error: this pyahu is managed by another tool; upgrade it with: mise use github:pyahu/cli@<version>
 ```
 
 ## Verify the installation

@@ -448,10 +448,10 @@ pyahu certs status --output json
 When a newer release exists, the CLI prints a notice at the end of any command:
 
 ```text
-⚠ pyahu 0.4.0 is out of date — 0.7.0 is available
+⚠ pyahu x.y.z is out of date — a.b.c is available
   pyahu upgrade
   curl -fsSL https://cli.pyahu.io/install.sh | sh
-  https://github.com/pyahu/cli/releases/tag/v0.7.0
+  https://github.com/pyahu/cli/releases/tag/va.b.c
   silence this with PYAHU_NO_UPDATE_CHECK=1
 ```
 
@@ -485,7 +485,7 @@ Asks the releases endpoint directly — it does not go through the 24h cache beh
 
 ```bash
 pyahu check-update
-pyahu check-update --output json      # {"current":"0.4.0","latest":"0.7.0","outdated":true}
+pyahu check-update --output json      # {"current":"x.y.z","latest":"a.b.c","outdated":true}
 pyahu check-update --exit-code        # 0 = up to date, 1 = a newer release exists
 ```
 
@@ -517,7 +517,7 @@ If this `pyahu` came from **mise** or `go install`, the command refuses and prin
 instruction — replacing the file there would be undone by the next `mise install`:
 
 ```text
-error: this pyahu is managed by another tool; upgrade it with: mise use github:pyahu/cli@0.7.0
+error: this pyahu is managed by another tool; upgrade it with: mise use github:pyahu/cli@<version>
 ```
 :::
 
