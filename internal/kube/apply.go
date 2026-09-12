@@ -94,6 +94,7 @@ func (c *Client) deleteServiceIfExists(ctx context.Context, namespace string, na
 }
 
 func (c *Client) applyStatefulSet(ctx context.Context, sts *appsv1.StatefulSet) error {
+	hardenPodSpec(&sts.Spec.Template.Spec)
 	existing, err := c.clientset.AppsV1().StatefulSets(sts.Namespace).Get(ctx, sts.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		_, err = c.clientset.AppsV1().StatefulSets(sts.Namespace).Create(ctx, sts, metav1.CreateOptions{})
@@ -116,6 +117,7 @@ func (c *Client) deleteStatefulSetIfExists(ctx context.Context, namespace string
 }
 
 func (c *Client) applyDeployment(ctx context.Context, deploy *appsv1.Deployment) error {
+	hardenPodSpec(&deploy.Spec.Template.Spec)
 	existing, err := c.clientset.AppsV1().Deployments(deploy.Namespace).Get(ctx, deploy.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		_, err = c.clientset.AppsV1().Deployments(deploy.Namespace).Create(ctx, deploy, metav1.CreateOptions{})
@@ -144,6 +146,7 @@ func (c *Client) applyIngress(ctx context.Context, ingress *networkingv1.Ingress
 }
 
 func (c *Client) applyJob(ctx context.Context, job *batchv1.Job) error {
+	hardenPodSpec(&job.Spec.Template.Spec)
 	existing, err := c.clientset.BatchV1().Jobs(job.Namespace).Get(ctx, job.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		_, err = c.clientset.BatchV1().Jobs(job.Namespace).Create(ctx, job, metav1.CreateOptions{})
