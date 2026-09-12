@@ -74,7 +74,9 @@ curl -fsSL https://cli.pyahu.io/install.sh | sh -s -- --version v1.2.3
 ```
 
 Auditing it before running is simple: `curl -fsSL https://cli.pyahu.io/install.sh` shows the
-contents. To update, use `pyahu upgrade` (below) or run the script again.
+contents. The script verifies the archive's SHA-256 against the `checksums.txt` published with
+the same release before extracting it. To update, use `pyahu upgrade` (below) or run the script
+again.
 
 ## go install
 

@@ -78,3 +78,7 @@ run = [
 description = "Build and run the real k3d lifecycle smoke test"
 depends = ["build"]
 run = "./scripts/smoke-k3d.sh"
+
+[tasks.test-install]
+description = "Test install script checksum verification"
+run = "./scripts/test-install.sh"

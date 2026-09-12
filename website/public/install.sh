@@ -13,6 +13,7 @@ REPO="pyahu/cli"
 BINARY="pyahu"
 BIN_DIR="/usr/local/bin"
 VERSION="${PYAHU_VERSION:-latest}"
+DOWNLOAD_BASE="${PYAHU_DOWNLOAD_BASE:-https://github.com/$REPO/releases/download}"
 
 err() {
   echo "error: $*" >&2
@@ -52,14 +53,37 @@ if [ "$VERSION" = "latest" ]; then
 fi
 
 archive="${BINARY}_${os}_${arch}.tar.gz"
-url="https://github.com/$REPO/releases/download/$VERSION/$archive"
+release_url="$DOWNLOAD_BASE/$VERSION"
+url="$release_url/$archive"
+checksums_url="$release_url/checksums.txt"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 echo "downloading $BINARY $VERSION ($os/$arch)..."
 curl -fsSL "$url" -o "$tmp/$archive" || err "download failed: $url"
-tar -xzf "$tmp/$archive" -C "$tmp" || err "could not extract $archive"
+curl -fsSL "$checksums_url" -o "$tmp/checksums.txt" \
+  || err "download failed: $checksums_url"
+
+expected="$(awk -v archive="$archive" '$2 == archive { print $1; exit }' "$tmp/checksums.txt")"
+case "$expected" in
+  "" | *[!0-9a-fA-F]*) err "checksums.txt does not contain a valid SHA-256 for $archive" ;;
+esac
+[ "${#expected}" -eq 64 ] || err "checksums.txt does not contain a valid SHA-256 for $archive"
+
+if command -v sha256sum >/dev/null 2>&1; then
+  actual="$(sha256sum "$tmp/$archive" | awk '{ print $1 }')"
+elif command -v shasum >/dev/null 2>&1; then
+  actual="$(shasum -a 256 "$tmp/$archive" | awk '{ print $1 }')"
+elif command -v openssl >/dev/null 2>&1; then
+  actual="$(openssl dgst -sha256 "$tmp/$archive" | awk '{ print $NF }')"
+else
+  err "sha256sum, shasum, or openssl is required to verify the download"
+fi
+[ "$actual" = "$expected" ] || err "SHA-256 mismatch for $archive"
+echo "verified SHA-256 for $archive"
+
+tar -xzf "$tmp/$archive" -C "$tmp" "$BINARY" || err "could not extract $archive"
 
 need_sudo=""
 if [ -d "$BIN_DIR" ]; then

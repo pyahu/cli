@@ -32,6 +32,9 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Test installer
+        run: ./scripts/test-install.sh
+
       - name: GoReleaser config check
         uses: goreleaser/goreleaser-action@v6
         with:
