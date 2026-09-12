@@ -51,7 +51,8 @@ pyahu init --preset platform -f infra/pyahu.yaml
 ### `pyahu up`
 
 Creates the k3d cluster when needed and reconciles the Kubernetes resources. It is **idempotent**:
-a second `pyahu up` converges or does nothing.
+a second `pyahu up` converges or does nothing. Resources managed by Pyahu that are no longer in
+the stack are removed; persistent volume claims are retained to protect local data.
 
 | Flag | Default | Description |
 | --- | --- | --- |

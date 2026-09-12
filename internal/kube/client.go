@@ -116,7 +116,7 @@ func (c *Client) ApplyStack(ctx context.Context, stack *schema.Stack, stackDir s
 			return err
 		}
 	}
-	return nil
+	return c.pruneObsoleteResources(ctx, stack)
 }
 
 func (c *Client) DeleteNamespace(ctx context.Context, namespace string) error {
