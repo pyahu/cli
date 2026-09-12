@@ -165,6 +165,9 @@ func (c *Client) applyJob(ctx context.Context, job *batchv1.Job) error {
 			_, err = c.clientset.BatchV1().Jobs(job.Namespace).Create(ctx, job, metav1.CreateOptions{})
 			return err == nil, err
 		}
+		if err != nil {
+			return false, err
+		}
 		return false, nil
 	})
 }

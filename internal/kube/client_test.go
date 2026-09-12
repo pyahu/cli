@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -10,8 +11,12 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/pyahu/cli/pkg/schema"
 )
@@ -35,6 +40,40 @@ func TestWaitForJobReturnsFailureCondition(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("error does not contain %q: %v", want, err)
 		}
+	}
+}
+
+func TestWaitForServiceReturnsAuthorizationErrorsImmediately(t *testing.T) {
+	clientset := fake.NewSimpleClientset()
+	clientset.PrependReactor("list", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewForbidden(
+			runtimeschema.GroupResource{Resource: "pods"},
+			"",
+			errors.New("access denied"),
+		)
+	})
+	client := &Client{clientset: clientset}
+
+	started := time.Now()
+	err := client.WaitForService(context.Background(), "demo", "postgres", time.Minute)
+	if err == nil || !apierrors.IsForbidden(err) {
+		t.Fatalf("expected forbidden error, got %v", err)
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("authorization error was delayed for %s", elapsed)
+	}
+}
+
+func TestWaitForServicePreservesLastTransientError(t *testing.T) {
+	clientset := fake.NewSimpleClientset()
+	clientset.PrependReactor("list", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("temporary transport failure")
+	})
+	client := &Client{clientset: clientset}
+
+	err := client.WaitForService(context.Background(), "demo", "postgres", 10*time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "temporary transport failure") {
+		t.Fatalf("last transient error was not preserved: %v", err)
 	}
 }
 

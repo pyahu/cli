@@ -59,10 +59,23 @@ func New(kubeconfig string) (*Client, error) {
 }
 
 func (c *Client) WaitForAPI(ctx context.Context, timeout time.Duration) error {
-	return wait.PollUntilContextTimeout(ctx, 2*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+	var lastErr error
+	err := wait.PollUntilContextTimeout(ctx, 2*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		_, err := c.clientset.Discovery().ServerVersion()
-		return err == nil, nil
+		if err == nil {
+			lastErr = nil
+			return true, nil
+		}
+		if permanentAPIError(err) {
+			return false, err
+		}
+		lastErr = err
+		return false, nil
 	})
+	if err != nil && lastErr != nil {
+		return fmt.Errorf("%w (last Kubernetes API error: %v)", err, lastErr)
+	}
+	return err
 }
 
 func (c *Client) ApplyStack(ctx context.Context, stack *schema.Stack, stackDir string) error {
@@ -226,11 +239,17 @@ func (c *Client) waitForKafkaConnectConnectors(ctx context.Context, stack *schem
 
 func (c *Client) WaitForService(ctx context.Context, namespace string, service string, timeout time.Duration) error {
 	selector := labels.SelectorFromSet(labels.Set{"app.kubernetes.io/name": service}).String()
-	return wait.PollUntilContextTimeout(ctx, 2*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+	var lastErr error
+	err := wait.PollUntilContextTimeout(ctx, 2*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		pods, err := c.clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
 		if err != nil {
+			if permanentAPIError(err) {
+				return false, err
+			}
+			lastErr = err
 			return false, nil
 		}
+		lastErr = nil
 		if len(pods.Items) == 0 {
 			return false, nil
 		}
@@ -241,6 +260,17 @@ func (c *Client) WaitForService(ctx context.Context, namespace string, service s
 		}
 		return true, nil
 	})
+	if err != nil && lastErr != nil {
+		return fmt.Errorf("%w (last error listing %s pods: %v)", err, service, lastErr)
+	}
+	return err
+}
+
+func permanentAPIError(err error) bool {
+	return apierrors.IsUnauthorized(err) ||
+		apierrors.IsForbidden(err) ||
+		apierrors.IsBadRequest(err) ||
+		apierrors.IsInvalid(err)
 }
 
 func (c *Client) Status(ctx context.Context, stack *schema.Stack) ([]ServiceStatus, error) {
