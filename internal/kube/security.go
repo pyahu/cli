@@ -31,5 +31,18 @@ func hardenContainer(container *corev1.Container) {
 	container.SecurityContext.AllowPrivilegeEscalation = &allowPrivilegeEscalation
 	container.SecurityContext.Capabilities = &corev1.Capabilities{
 		Drop: []corev1.Capability{"ALL"},
+		Add:  capabilitiesForEntrypoint(container.Name),
+	}
+}
+
+func capabilitiesForEntrypoint(name string) []corev1.Capability {
+	// These official images start as root to prepare their data directory and
+	// then switch to the service user. Keep only the capabilities their
+	// entrypoints need instead of restoring Docker's full default set.
+	switch name {
+	case "postgres", "rabbitmq", "redis":
+		return []corev1.Capability{"CHOWN", "FOWNER", "SETGID", "SETUID"}
+	default:
+		return nil
 	}
 }

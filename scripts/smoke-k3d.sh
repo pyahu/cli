@@ -48,10 +48,30 @@ if [[ -n "${PYAHU_E2E_K3S_IMAGE:-}" ]]; then
   k3sVersion: $PYAHU_E2E_K3S_IMAGE"
 fi
 
+print_diagnostics() {
+  local server_container="k3d-$cluster_name-server-0"
+  if ! docker inspect "$server_container" >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "Smoke test diagnostics for $namespace" >&2
+  docker exec "$server_container" kubectl -n "$namespace" get pods -o wide >&2
+  docker exec "$server_container" kubectl -n "$namespace" get events --sort-by=.lastTimestamp >&2
+
+  local pod
+  while IFS= read -r pod; do
+    echo "Logs for $pod" >&2
+    docker exec "$server_container" kubectl -n "$namespace" logs "$pod" --all-containers --tail=100 >&2
+  done < <(docker exec "$server_container" kubectl -n "$namespace" get pods -o name 2>/dev/null)
+}
+
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM
   set +e
+  if [[ "$exit_code" -ne 0 ]]; then
+    print_diagnostics
+  fi
   "$pyahu_bin" --no-input --no-color --quiet --file "$stack_file" down --purge-data --yes >/dev/null 2>&1
   k3d cluster delete "$cluster_name" >/dev/null 2>&1
   rm -rf -- "$temp_dir"

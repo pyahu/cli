@@ -33,3 +33,33 @@ func TestHardenPodSpecAppliesRestrictedDefaults(t *testing.T) {
 		}
 	}
 }
+
+func TestHardenPodSpecKeepsCapabilitiesNeededToSwitchServiceUser(t *testing.T) {
+	spec := corev1.PodSpec{Containers: []corev1.Container{
+		{Name: "postgres"},
+		{Name: "redis"},
+		{Name: "rabbitmq"},
+		{Name: "app"},
+	}}
+
+	hardenPodSpec(&spec)
+
+	want := []corev1.Capability{"CHOWN", "FOWNER", "SETGID", "SETUID"}
+	for _, container := range spec.Containers {
+		got := container.SecurityContext.Capabilities.Add
+		if container.Name == "app" {
+			if len(got) != 0 {
+				t.Fatalf("container %q capabilities = %v, want none", container.Name, got)
+			}
+			continue
+		}
+		if len(got) != len(want) {
+			t.Fatalf("container %q capabilities = %v, want %v", container.Name, got, want)
+		}
+		for index := range want {
+			if got[index] != want[index] {
+				t.Fatalf("container %q capabilities = %v, want %v", container.Name, got, want)
+			}
+		}
+	}
+}
