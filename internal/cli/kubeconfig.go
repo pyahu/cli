@@ -32,7 +32,7 @@ func (a *app) newKubeconfigCmd() *cobra.Command {
 			if a.opts.output == "json" {
 				return writeJSON(a.opts.out, map[string]string{"path": path})
 			}
-			fmt.Fprintln(a.opts.out, path)
+			_, _ = fmt.Fprintln(a.opts.out, path)
 			return nil
 		},
 	}

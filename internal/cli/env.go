@@ -25,11 +25,15 @@ func (a *app) newEnvCmd() *cobra.Command {
 				return writeJSON(a.opts.out, env)
 			case "dotenv":
 				for _, key := range schema.SortedEnvKeys(env) {
-					fmt.Fprintf(a.opts.out, "%s=%s\n", key, env[key])
+					if _, err := fmt.Fprintf(a.opts.out, "%s=%s\n", key, env[key]); err != nil {
+						return serviceError(fmt.Sprintf("write environment: %v", err))
+					}
 				}
 			case "shell":
 				for _, key := range schema.SortedEnvKeys(env) {
-					fmt.Fprintf(a.opts.out, "export %s=%s\n", key, shellQuote(env[key]))
+					if _, err := fmt.Fprintf(a.opts.out, "export %s=%s\n", key, shellQuote(env[key])); err != nil {
+						return serviceError(fmt.Sprintf("write environment: %v", err))
+					}
 				}
 			default:
 				return usageError("env --format must be shell, dotenv, or json")

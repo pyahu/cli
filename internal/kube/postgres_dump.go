@@ -60,7 +60,7 @@ func (c *Client) RestorePostgres(ctx context.Context, stack *schema.Stack, datab
 
 func (c *Client) execPostgresPrimary(ctx context.Context, stack *schema.Stack, command []string, stdin io.Reader, stdout io.Writer) error {
 	if c.restConfig == nil {
-		return fmt.Errorf("Kubernetes REST config is not available")
+		return fmt.Errorf("kubernetes REST config is not available")
 	}
 	pod, err := c.postgresPrimaryPod(ctx, stack)
 	if err != nil {

@@ -185,8 +185,12 @@ func (a *app) confirmUpgrade(executable string, version string, yes bool) error 
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return usageError("upgrade requires --yes in non-interactive mode")
 	}
-	fmt.Fprintf(a.opts.out, "This replaces %s with pyahu %s.\n", executable, version)
-	fmt.Fprint(a.opts.out, "Continue? [y/N]: ")
+	if _, err := fmt.Fprintf(a.opts.out, "This replaces %s with pyahu %s.\n", executable, version); err != nil {
+		return serviceError(fmt.Sprintf("write confirmation prompt: %v", err))
+	}
+	if _, err := fmt.Fprint(a.opts.out, "Continue? [y/N]: "); err != nil {
+		return serviceError(fmt.Sprintf("write confirmation prompt: %v", err))
+	}
 	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
 		return usageError(fmt.Sprintf("read confirmation: %v", err))

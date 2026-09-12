@@ -81,9 +81,9 @@ func (a *app) renderDescribe(service catalog.Service, showSecrets bool) {
 	a.info("")
 	a.info("%s", s.bold("Endpoints"))
 	tw := tabwriter.NewWriter(a.opts.out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tPROTOCOL\tHOST\tPORT\tURL\tINTERNAL")
+	_, _ = fmt.Fprintln(tw, "NAME\tPROTOCOL\tHOST\tPORT\tURL\tINTERNAL")
 	for _, endpoint := range service.Endpoints {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 			endpoint.Name,
 			endpoint.Protocol,
 			valueOrDash(endpoint.Host),
@@ -120,9 +120,9 @@ func (a *app) renderDescribe(service catalog.Service, showSecrets bool) {
 		return
 	}
 	pods := tabwriter.NewWriter(a.opts.out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(pods, "NAME\tREADY\tPHASE\tREASON")
+	_, _ = fmt.Fprintln(pods, "NAME\tREADY\tPHASE\tREASON")
 	for _, pod := range service.Pods {
-		fmt.Fprintf(pods, "%s\t%t\t%s\t%s\n", pod.Name, pod.Ready, pod.Phase, valueOrDash(pod.Reason))
+		_, _ = fmt.Fprintf(pods, "%s\t%t\t%s\t%s\n", pod.Name, pod.Ready, pod.Phase, valueOrDash(pod.Reason))
 	}
 	_ = pods.Flush()
 }

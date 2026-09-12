@@ -60,7 +60,6 @@ func (a *app) newBackupPostgresCmd() *cobra.Command {
 			if err != nil {
 				return serviceError(fmt.Sprintf("create backup file: %v", err))
 			}
-			defer file.Close()
 
 			if err := a.phase("Creating database dump for "+database, func() (string, error) {
 				if err := client.BackupPostgres(cmd.Context(), stack, database, file); err != nil {
@@ -71,6 +70,10 @@ func (a *app) newBackupPostgresCmd() *cobra.Command {
 				_ = file.Close()
 				_ = os.Remove(path)
 				return err
+			}
+			if err := file.Close(); err != nil {
+				_ = os.Remove(path)
+				return serviceError(fmt.Sprintf("finish backup file: %v", err))
 			}
 			if a.opts.output == "json" {
 				return writeJSON(a.opts.out, map[string]any{
@@ -134,7 +137,7 @@ func (a *app) newRestorePostgresCmd() *cobra.Command {
 				return dependencyError(err.Error())
 			}
 			defer cleanup()
-			defer reader.Close()
+			defer func() { _ = reader.Close() }()
 
 			if err := a.phase("Restoring database "+database, func() (string, error) {
 				if err := client.RestorePostgres(cmd.Context(), stack, database, reader, kube.PostgresRestoreOptions{Clean: clean}); err != nil {
@@ -177,8 +180,12 @@ func (a *app) confirmDestructiveRestore(database string, source string, yes bool
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return usageError("restore postgres with --clean requires --yes in non-interactive mode")
 	}
-	fmt.Fprintf(a.opts.out, "This will restore %s with --clean from %s and may drop existing objects.\n", database, source)
-	fmt.Fprintf(a.opts.out, "Type %s to continue: ", database)
+	if _, err := fmt.Fprintf(a.opts.out, "This will restore %s with --clean from %s and may drop existing objects.\n", database, source); err != nil {
+		return serviceError(fmt.Sprintf("write confirmation prompt: %v", err))
+	}
+	if _, err := fmt.Fprintf(a.opts.out, "Type %s to continue: ", database); err != nil {
+		return serviceError(fmt.Sprintf("write confirmation prompt: %v", err))
+	}
 	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
 		return usageError(fmt.Sprintf("read confirmation: %v", err))

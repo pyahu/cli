@@ -51,7 +51,7 @@ func fakeReleaseHost(t *testing.T, asset string, archive []byte, checksum string
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/checksums.txt", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "%s  %s\n", checksum, asset)
+		_, _ = fmt.Fprintf(w, "%s  %s\n", checksum, asset)
 	})
 	mux.HandleFunc("/"+asset, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(archive)

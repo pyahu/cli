@@ -134,7 +134,7 @@ func (d *Downloader) get(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%s returned %s", url, resp.Status)
 	}
@@ -157,7 +157,7 @@ func binaryFromTarGz(archive []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read release archive: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	reader := tar.NewReader(gz)
 	for {
@@ -204,10 +204,10 @@ func Replace(path string, binary []byte) error {
 		return err
 	}
 	stagedPath := staged.Name()
-	defer os.Remove(stagedPath)
+	defer func() { _ = os.Remove(stagedPath) }()
 
 	if _, err := staged.Write(binary); err != nil {
-		staged.Close()
+		_ = staged.Close()
 		return err
 	}
 	if err := staged.Close(); err != nil {

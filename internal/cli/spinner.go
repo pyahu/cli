@@ -29,10 +29,10 @@ func (a *app) phase(label string, fn func() (string, error)) error {
 
 	if !a.interactive() {
 		s := a.styler()
-		fmt.Fprintf(a.opts.out, "%s %s\n", s.cyan(iconArrow), label)
+		_, _ = fmt.Fprintf(a.opts.out, "%s %s\n", s.cyan(iconArrow), label)
 		done, err := fn()
 		if err == nil && done != "" {
-			fmt.Fprintf(a.opts.out, "  %s %s\n", s.green(iconOK), done)
+			_, _ = fmt.Fprintf(a.opts.out, "  %s %s\n", s.green(iconOK), done)
 		}
 		return err
 	}
@@ -91,7 +91,7 @@ func (s *spinner) loop() {
 
 func (s *spinner) frame(i int) {
 	frame := spinnerFrames[i%len(spinnerFrames)]
-	fmt.Fprintf(s.out, "\r\x1b[2K%s %s", s.style.cyan(frame), s.label)
+	_, _ = fmt.Fprintf(s.out, "\r\x1b[2K%s %s", s.style.cyan(frame), s.label)
 }
 
 func (s *spinner) finish(ok bool, final string) {
@@ -102,11 +102,11 @@ func (s *spinner) finish(ok bool, final string) {
 		icon = s.style.red(iconFail)
 	}
 	elapsed := s.style.dim("(" + durationShort(time.Since(s.started)) + ")")
-	fmt.Fprintf(s.out, "\r\x1b[2K%s %s  %s\n", icon, final, elapsed)
+	_, _ = fmt.Fprintf(s.out, "\r\x1b[2K%s %s  %s\n", icon, final, elapsed)
 }
 
 func (s *spinner) clear() {
 	close(s.stop)
 	<-s.done
-	fmt.Fprint(s.out, "\r\x1b[2K")
+	_, _ = fmt.Fprint(s.out, "\r\x1b[2K")
 }

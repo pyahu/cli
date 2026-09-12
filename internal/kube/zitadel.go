@@ -203,7 +203,7 @@ func zitadelScheme(external zitadelExternal) string {
 // (e.g. https://zitadel.localhost/ui/v2/login), omitting the default port.
 func loginV2Prefix(external zitadelExternal) string {
 	host := external.domain
-	if !(external.port == "" || (external.secure && external.port == "443") || (!external.secure && external.port == "80")) {
+	if external.port != "" && (!external.secure || external.port != "443") && (external.secure || external.port != "80") {
 		host = host + ":" + external.port
 	}
 	return zitadelScheme(external) + "://" + host + "/ui/v2/login"

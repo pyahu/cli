@@ -120,15 +120,15 @@ func (a *app) renderConnectorsStatus(connectors []connect.Connector) {
 	}
 	s := a.styler()
 	tw := tabwriter.NewWriter(a.opts.out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, s.dim(s.bold("CONNECTOR\tTASK\tSTATE\tDETAIL")))
+	_, _ = fmt.Fprintln(tw, s.dim(s.bold("CONNECTOR\tTASK\tSTATE\tDETAIL")))
 	for _, connector := range connectors {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", connector.Name, "-", a.colorConnectorState(connector.State), valueOrDash(connector.Type))
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", connector.Name, "-", a.colorConnectorState(connector.State), valueOrDash(connector.Type))
 		if len(connector.Tasks) == 0 {
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", "", "-", a.colorConnectorState("NO TASKS"), "the connector has no tasks")
+			_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", "", "-", a.colorConnectorState("NO TASKS"), "the connector has no tasks")
 			continue
 		}
 		for _, task := range connector.Tasks {
-			fmt.Fprintf(tw, "%s\t%d\t%s\t%s\n", "", task.ID, a.colorConnectorState(task.State), valueOrDash(task.Trace))
+			_, _ = fmt.Fprintf(tw, "%s\t%d\t%s\t%s\n", "", task.ID, a.colorConnectorState(task.State), valueOrDash(task.Trace))
 		}
 	}
 	_ = tw.Flush()

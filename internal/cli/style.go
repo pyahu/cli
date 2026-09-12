@@ -37,7 +37,6 @@ func (s styler) green(t string) string  { return s.paint("32", t) }
 func (s styler) red(t string) string    { return s.paint("31", t) }
 func (s styler) yellow(t string) string { return s.paint("33", t) }
 func (s styler) cyan(t string) string   { return s.paint("36", t) }
-func (s styler) blue(t string) string   { return s.paint("34", t) }
 func (s styler) gray(t string) string   { return s.paint("90", t) }
 func (s styler) dim(t string) string    { return s.paint("2", t) }
 func (s styler) bold(t string) string   { return s.paint("1", t) }

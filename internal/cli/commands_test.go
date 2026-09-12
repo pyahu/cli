@@ -286,7 +286,7 @@ func TestOpenRestoreSourceDownloadsS3WithCustomEndpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		t.Fatal(err)
@@ -795,7 +795,7 @@ func startFakeConnect(t *testing.T, body string) int {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, body)
+		_, _ = fmt.Fprint(w, body)
 	}))
 	t.Cleanup(server.Close)
 	parsed, err := url.Parse(server.URL)

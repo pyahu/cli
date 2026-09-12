@@ -20,7 +20,7 @@ func (a *app) info(format string, args ...any) {
 	if a.opts.quiet || a.opts.output != "human" {
 		return
 	}
-	fmt.Fprintf(a.opts.out, format+"\n", args...)
+	_, _ = fmt.Fprintf(a.opts.out, format+"\n", args...)
 }
 
 func (a *app) step(area string, format string, args ...any) {
@@ -32,7 +32,7 @@ func (a *app) step(area string, format string, args ...any) {
 	if a.colorOn() {
 		tag = a.styler().dim(tag)
 	}
-	fmt.Fprintf(a.opts.out, "%s %s\n", tag, message)
+	_, _ = fmt.Fprintf(a.opts.out, "%s %s\n", tag, message)
 }
 
 func (a *app) printWarnings(checks []doctor.Check) {

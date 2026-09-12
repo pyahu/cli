@@ -28,15 +28,15 @@ func (a *app) printUpgradeNotice(check func(time.Duration) (update.Result, bool)
 	}
 
 	s := styler{on: stderrColor(a.opts)}
-	fmt.Fprintln(a.opts.err)
-	fmt.Fprintf(a.opts.err, "%s %s\n",
+	_, _ = fmt.Fprintln(a.opts.err)
+	_, _ = fmt.Fprintf(a.opts.err, "%s %s\n",
 		s.yellow(iconWarn),
 		s.yellow(fmt.Sprintf("pyahu %s is out of date — %s is available", result.Current, result.Latest)))
 	for _, command := range update.Instructions(executablePath(), result.Latest) {
-		fmt.Fprintf(a.opts.err, "  %s\n", s.bold(command))
+		_, _ = fmt.Fprintf(a.opts.err, "  %s\n", s.bold(command))
 	}
-	fmt.Fprintf(a.opts.err, "  %s\n", s.dim(update.ReleaseNotesURL(result.Latest)))
-	fmt.Fprintf(a.opts.err, "  %s\n", s.dim("silence this with "+update.OptOutEnv+"=1"))
+	_, _ = fmt.Fprintf(a.opts.err, "  %s\n", s.dim(update.ReleaseNotesURL(result.Latest)))
+	_, _ = fmt.Fprintf(a.opts.err, "  %s\n", s.dim("silence this with "+update.OptOutEnv+"=1"))
 }
 
 func executablePath() string {

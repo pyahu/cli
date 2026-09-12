@@ -113,11 +113,11 @@ func (c *Client) Delete(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("call Kafka Connect at %s: %w", c.baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNotFound {
 		return nil
 	}
-	return fmt.Errorf("Kafka Connect DELETE /connectors/%s returned %s", name, resp.Status)
+	return fmt.Errorf("delete Kafka Connect connector %s: endpoint returned %s", name, resp.Status)
 }
 
 // Healthy reports whether every task is RUNNING. A connector with no tasks is
@@ -146,9 +146,9 @@ func (c *Client) get(ctx context.Context, path string, out any) error {
 	if err != nil {
 		return fmt.Errorf("call Kafka Connect at %s: %w", c.baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Kafka Connect %s returned %s", path, resp.Status)
+		return fmt.Errorf("call Kafka Connect %s: endpoint returned %s", path, resp.Status)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
 }

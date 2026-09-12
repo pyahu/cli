@@ -96,8 +96,12 @@ func (a *app) confirmDataPurge(clusterName string, storageDir string, yes bool) 
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return guidedError("down --purge-data requires --yes in non-interactive mode")
 	}
-	fmt.Fprintf(a.opts.out, "This will permanently delete local data at %s.\n", displayPath(storageDir))
-	fmt.Fprintf(a.opts.out, "Type %s to continue: ", clusterName)
+	if _, err := fmt.Fprintf(a.opts.out, "This will permanently delete local data at %s.\n", displayPath(storageDir)); err != nil {
+		return usageError(fmt.Sprintf("write purge confirmation: %v", err))
+	}
+	if _, err := fmt.Fprintf(a.opts.out, "Type %s to continue: ", clusterName); err != nil {
+		return usageError(fmt.Sprintf("write purge confirmation: %v", err))
+	}
 	answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
 		return usageError(fmt.Sprintf("read confirmation: %v", err))

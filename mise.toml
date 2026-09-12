@@ -1,6 +1,7 @@
 [tools]
 go = "1.26.4"
 k3d = "5.9.0"
+golangci-lint = "2.13.2"
 node = "24.14.0"
 goreleaser = "2"
 
@@ -25,8 +26,8 @@ description = "Run all Go tests"
 run = "go test ./..."
 
 [tasks.lint]
-description = "Run lightweight static checks"
-run = "go vet ./..."
+description = "Run static analysis"
+run = "golangci-lint run ./..."
 
 [tasks.fmt]
 description = "Format Go source files"

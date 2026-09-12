@@ -99,12 +99,12 @@ func Execute(version string, commit string, date string) int {
 	if err := cmd.Execute(); err != nil {
 		es := styler{on: stderrColor(a.opts)}
 		if errors.Is(err, context.Canceled) {
-			fmt.Fprintf(a.opts.err, "%s %s\n", es.yellow(iconWarn), es.yellow("interrupted"))
+			_, _ = fmt.Fprintf(a.opts.err, "%s %s\n", es.yellow(iconWarn), es.yellow("interrupted"))
 			return 130
 		}
-		fmt.Fprintf(a.opts.err, "%s %s\n", es.bad("error:"), err)
+		_, _ = fmt.Fprintf(a.opts.err, "%s %s\n", es.bad("error:"), err)
 		if hint := errorHint(err); hint != "" {
-			fmt.Fprintf(a.opts.err, "%s %s\n", es.dim("hint:"), es.dim(hint))
+			_, _ = fmt.Fprintf(a.opts.err, "%s %s\n", es.dim("hint:"), es.dim(hint))
 		}
 		return exitCode(err)
 	}

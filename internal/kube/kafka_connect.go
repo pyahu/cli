@@ -213,35 +213,35 @@ func kafkaConnectPluginInstallScript(stack *schema.Stack) string {
 		dir := shellQuote(kafkaConnectExtraPluginInstallDir(plugin.Name))
 		artifact := fmt.Sprintf("$work/%d", i)
 
-		b.WriteString(fmt.Sprintf("\necho \"installing plugin %s\"\n", plugin.Name))
-		b.WriteString(fmt.Sprintf("mkdir -p %s\n", dir))
+		_, _ = fmt.Fprintf(&b, "\necho \"installing plugin %s\"\n", plugin.Name)
+		_, _ = fmt.Fprintf(&b, "mkdir -p %s\n", dir)
 		if plugin.URL != "" {
-			b.WriteString(fmt.Sprintf("wget -q -O %s %s || { echo \"plugin %s: download failed: %s\" >&2; exit 1; }\n",
-				artifact, shellQuote(plugin.URL), plugin.Name, plugin.URL))
+			_, _ = fmt.Fprintf(&b, "wget -q -O %s %s || { echo \"plugin %s: download failed: %s\" >&2; exit 1; }\n",
+				artifact, shellQuote(plugin.URL), plugin.Name, plugin.URL)
 		} else {
 			source := "/plugin-files/" + kafkaConnectPluginFileKey(i, plugin)
-			b.WriteString(fmt.Sprintf("cp %s %s || { echo \"plugin %s: missing file artifact\" >&2; exit 1; }\n",
-				shellQuote(source), artifact, plugin.Name))
+			_, _ = fmt.Fprintf(&b, "cp %s %s || { echo \"plugin %s: missing file artifact\" >&2; exit 1; }\n",
+				shellQuote(source), artifact, plugin.Name)
 		}
 		if plugin.SHA256 != "" {
-			b.WriteString(fmt.Sprintf("echo \"%s  %s\" | sha256sum -c - >/dev/null || { echo \"plugin %s: sha256 mismatch\" >&2; exit 1; }\n",
-				plugin.SHA256, artifact, plugin.Name))
+			_, _ = fmt.Fprintf(&b, "echo \"%s  %s\" | sha256sum -c - >/dev/null || { echo \"plugin %s: sha256 mismatch\" >&2; exit 1; }\n",
+				plugin.SHA256, artifact, plugin.Name)
 		}
 		switch format {
 		case "jar":
-			b.WriteString(fmt.Sprintf("cp %s %s/%s\n", artifact, dir, shellQuote(schema.PluginArtifactBase(plugin))))
+			_, _ = fmt.Fprintf(&b, "cp %s %s/%s\n", artifact, dir, shellQuote(schema.PluginArtifactBase(plugin)))
 		default:
 			extractDir := fmt.Sprintf("$work/x%d", i)
-			b.WriteString(fmt.Sprintf("mkdir -p %s\n", extractDir))
+			_, _ = fmt.Fprintf(&b, "mkdir -p %s\n", extractDir)
 			if format == "zip" {
-				b.WriteString(fmt.Sprintf("unzip -q -o %s -d %s || { echo \"plugin %s: cannot unzip artifact\" >&2; exit 1; }\n", artifact, extractDir, plugin.Name))
+				_, _ = fmt.Fprintf(&b, "unzip -q -o %s -d %s || { echo \"plugin %s: cannot unzip artifact\" >&2; exit 1; }\n", artifact, extractDir, plugin.Name)
 			} else {
-				b.WriteString(fmt.Sprintf("tar -xzf %s -C %s || { echo \"plugin %s: cannot untar artifact\" >&2; exit 1; }\n", artifact, extractDir, plugin.Name))
+				_, _ = fmt.Fprintf(&b, "tar -xzf %s -C %s || { echo \"plugin %s: cannot untar artifact\" >&2; exit 1; }\n", artifact, extractDir, plugin.Name)
 			}
-			b.WriteString(fmt.Sprintf("find %s -name '*.jar' -type f -exec cp {} %s/ \\;\n", extractDir, dir))
-			b.WriteString(fmt.Sprintf("[ -n \"$(ls -A %s)\" ] || { echo \"plugin %s: archive contained no jar\" >&2; exit 1; }\n", dir, plugin.Name))
+			_, _ = fmt.Fprintf(&b, "find %s -name '*.jar' -type f -exec cp {} %s/ \\;\n", extractDir, dir)
+			_, _ = fmt.Fprintf(&b, "[ -n \"$(ls -A %s)\" ] || { echo \"plugin %s: archive contained no jar\" >&2; exit 1; }\n", dir, plugin.Name)
 		}
-		b.WriteString(fmt.Sprintf("echo \"plugin %s: $(ls %s | wc -l) jar(s)\"\n", plugin.Name, dir))
+		_, _ = fmt.Fprintf(&b, "echo \"plugin %s: $(ls %s | wc -l) jar(s)\"\n", plugin.Name, dir)
 	}
 	return b.String()
 }

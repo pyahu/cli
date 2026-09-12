@@ -268,7 +268,7 @@ func postgresInitScriptWithSeeds(databases []schema.DatabaseConfig, defaultOwner
 	if replicationUser != "" {
 		password := postgresSQLLiteral(replicationPassword)
 		builder.WriteString("psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres <<'SQL'\n")
-		builder.WriteString(fmt.Sprintf("DO $$\nBEGIN\n  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = %s) THEN\n    CREATE ROLE \"%s\" WITH REPLICATION LOGIN PASSWORD %s;\n  ELSE\n    ALTER ROLE \"%s\" WITH REPLICATION LOGIN PASSWORD %s;\n  END IF;\nEND\n$$;\n", postgresSQLLiteral(replicationUser), replicationUser, password, replicationUser, password))
+		_, _ = fmt.Fprintf(&builder, "DO $$\nBEGIN\n  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = %s) THEN\n    CREATE ROLE \"%s\" WITH REPLICATION LOGIN PASSWORD %s;\n  ELSE\n    ALTER ROLE \"%s\" WITH REPLICATION LOGIN PASSWORD %s;\n  END IF;\nEND\n$$;\n", postgresSQLLiteral(replicationUser), replicationUser, password, replicationUser, password)
 		builder.WriteString("SQL\n")
 	}
 	for i, db := range databases {
@@ -277,9 +277,9 @@ func postgresInitScriptWithSeeds(databases []schema.DatabaseConfig, defaultOwner
 			owner = defaultOwner
 		}
 		if owner != defaultOwner {
-			builder.WriteString(fmt.Sprintf("psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -tc \"SELECT 1 FROM pg_roles WHERE rolname = '%s'\" | grep -q 1 || psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -c 'CREATE ROLE \"%s\";'\n", owner, owner))
+			_, _ = fmt.Fprintf(&builder, "psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -tc \"SELECT 1 FROM pg_roles WHERE rolname = '%s'\" | grep -q 1 || psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -c 'CREATE ROLE \"%s\";'\n", owner, owner)
 		}
-		builder.WriteString(fmt.Sprintf("psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -tc \"SELECT 1 FROM pg_database WHERE datname = '%s'\" | grep -q 1 || psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -c 'CREATE DATABASE \"%s\" OWNER \"%s\";'\n", db.Name, db.Name, owner))
+		_, _ = fmt.Fprintf(&builder, "psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -tc \"SELECT 1 FROM pg_database WHERE datname = '%s'\" | grep -q 1 || psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname postgres -c 'CREATE DATABASE \"%s\" OWNER \"%s\";'\n", db.Name, db.Name, owner)
 		if db.Seed != "" {
 			if stackDir == "" {
 				continue
@@ -289,7 +289,7 @@ func postgresInitScriptWithSeeds(databases []schema.DatabaseConfig, defaultOwner
 				return "", fmt.Errorf("read seed for database %s: %w", db.Name, err)
 			}
 			marker := fmt.Sprintf("PYAHU_SEED_%d", i)
-			builder.WriteString(fmt.Sprintf("psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname \"%s\" <<'%s'\n", db.Name, marker))
+			_, _ = fmt.Fprintf(&builder, "psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname \"%s\" <<'%s'\n", db.Name, marker)
 			builder.Write(content)
 			if !strings.HasSuffix(string(content), "\n") {
 				builder.WriteByte('\n')

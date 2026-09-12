@@ -35,7 +35,7 @@ func (a *app) newLogsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer stream.Close()
+			defer func() { _ = stream.Close() }()
 			_, err = io.Copy(a.opts.out, stream)
 			return err
 		},
