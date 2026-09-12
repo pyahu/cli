@@ -73,3 +73,8 @@ run = [
   "root=$PWD && tmp=$(mktemp -d) && mkdir -p \"$tmp/config\" \"$tmp/project\" && printf 'services:\\n  zitadel:\\n    ports:\\n      http: 18081\\n' > \"$tmp/config/pyahu.yaml\" && cp examples/platform.yaml \"$tmp/project/pyahu.yaml\" && cd \"$tmp/project\" && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" env --format json >/dev/null && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" services >/dev/null && XDG_CONFIG_HOME=\"$tmp/config\" \"$root/bin/pyahu\" describe postgres >/dev/null",
   "./bin/pyahu completion bash >/dev/null",
 ]
+
+[tasks.smoke-k3d]
+description = "Build and run the real k3d lifecycle smoke test"
+depends = ["build"]
+run = "./scripts/smoke-k3d.sh"

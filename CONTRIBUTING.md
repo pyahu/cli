@@ -24,10 +24,14 @@ mise run lint    # go vet ./...
 mise run fmt     # gofmt -s -w
 mise run tidy    # go mod tidy
 mise run smoke   # offline CLI smoke checks
+mise run smoke-k3d # real cluster lifecycle smoke test
 ```
 
 Unit tests must not require Docker, k3d, or Kubernetes — use the existing fakes.
-Real k3d smoke tests stay explicit, not part of the default unit run.
+The real k3d smoke test creates a temporary PostgreSQL and Redis stack, verifies
+backup/restore and reconciliation, then removes the cluster and its test data.
+It stays explicit locally because it downloads container images and requires a
+running Docker daemon.
 
 ## Project layout
 

@@ -42,6 +42,17 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Install k3d
+        run: |
+          go install github.com/k3d-io/k3d/v5@v5.9.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build Pyahu for real smoke test
+        run: mkdir -p bin && go build -o bin/pyahu ./cmd/pyahu
+
+      - name: Real k3d smoke test
+        run: ./scripts/smoke-k3d.sh
+
       - name: Compute next version
         id: tag
         uses: mathieudutour/github-tag-action@v6.2

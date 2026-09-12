@@ -1,0 +1,44 @@
+name: Real k3d smoke
+
+on:
+  pull_request:
+    paths:
+      - "cmd/**"
+      - "internal/**"
+      - "pkg/**"
+      - "scripts/smoke-k3d.sh"
+      - "mise.toml"
+      - ".github/workflows/smoke-k3d.yml"
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-k3d-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install k3d
+        run: |
+          go install github.com/k3d-io/k3d/v5@v5.9.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build Pyahu
+        run: mkdir -p bin && go build -o bin/pyahu ./cmd/pyahu
+
+      - name: Run real smoke test
+        run: ./scripts/smoke-k3d.sh
