@@ -35,10 +35,10 @@ does not require `kubectl` or `helm`.
 ```console
 $ pyahu init --preset platform
 $ pyahu up
-✓ Checando dependências locais  (137ms)
-✓ Cluster pyahu-local criado  (8.4s)
-✓ Aguardando a API do Kubernetes  (3.1s)
-✓ Configurando serviços: postgres, zitadel, rabbitmq, redis, kafka, kafka-connect, kafka-ui
+✓ Checking local dependencies  (137ms)
+✓ Cluster pyahu-local created  (8.4s)
+✓ Waiting for the Kubernetes API  (3.1s)
+✓ Configuring services: postgres, zitadel, rabbitmq, redis, kafka, kafka-connect, kafka-ui
 
 ✓ Pyahu local stack is ready
 ```
@@ -148,7 +148,7 @@ pyahu upgrade
 ```
 
 Full instructions, manual download and shell completion:
-[Installation docs](https://cli.pyahu.io/docs/instalacao).
+[Installation docs](https://cli.pyahu.io/docs/installation).
 
 ### Requirements
 

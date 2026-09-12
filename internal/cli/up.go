@@ -26,7 +26,7 @@ func (a *app) newUpCmd() *cobra.Command {
 			rt := a.deps.newRuntime(a.opts)
 
 			var checks []doctor.Check
-			if err := a.phase("Checando dependências locais", func() (string, error) {
+			if err := a.phase("Checking local dependencies", func() (string, error) {
 				clusterExists := false
 				if err := rt.CheckInstalled(); err == nil {
 					exists, err := rt.Exists(ctx, stack.Cluster.Name)
@@ -46,25 +46,25 @@ func (a *app) newUpCmd() *cobra.Command {
 					if err := writeJSON(a.opts.out, map[string]any{"event": "preflight.failed", "checks": checks}); err != nil {
 						return err
 					}
-					return dependencyError("preflight failed")
+					return guidedDependencyError("preflight failed")
 				}
 				for _, check := range checks {
 					if !check.OK {
 						a.renderCheck(check)
 					}
 				}
-				return dependencyError("preflight failed")
+				return guidedDependencyError("preflight failed")
 			}
 
-			if err := a.phase("Provisionando cluster k3d "+stack.Cluster.Name, func() (string, error) {
+			if err := a.phase("Provisioning k3d cluster "+stack.Cluster.Name, func() (string, error) {
 				created, err := rt.Create(ctx, stack, loaded.Dir)
 				if err != nil {
 					return "", clusterError(err.Error())
 				}
 				if created {
-					return "Cluster " + stack.Cluster.Name + " criado", nil
+					return "Cluster " + stack.Cluster.Name + " created", nil
 				}
-				return "Cluster " + stack.Cluster.Name + " reutilizado", nil
+				return "Cluster " + stack.Cluster.Name + " reused", nil
 			}); err != nil {
 				return err
 			}
@@ -78,7 +78,7 @@ func (a *app) newUpCmd() *cobra.Command {
 				return clusterError(err.Error())
 			}
 
-			if err := a.phase("Aguardando a API do Kubernetes", func() (string, error) {
+			if err := a.phase("Waiting for the Kubernetes API", func() (string, error) {
 				if err := client.WaitForAPI(ctx, 2*time.Minute); err != nil {
 					return "", clusterError(err.Error())
 				}
@@ -87,7 +87,7 @@ func (a *app) newUpCmd() *cobra.Command {
 				return err
 			}
 
-			if err := a.phase("Configurando serviços: "+strings.Join(stack.EnabledServices(), ", "), func() (string, error) {
+			if err := a.phase("Configuring services: "+strings.Join(stack.EnabledServices(), ", "), func() (string, error) {
 				if err := client.ApplyStack(ctx, stack, loaded.Dir); err != nil {
 					return "", serviceError(err.Error())
 				}
@@ -98,7 +98,7 @@ func (a *app) newUpCmd() *cobra.Command {
 
 			var warnings []string
 			if !skipWait {
-				if err := a.phase("Aguardando os serviços ficarem prontos", func() (string, error) {
+				if err := a.phase("Waiting for services to become ready", func() (string, error) {
 					collected, err := client.WaitForStack(ctx, stack)
 					warnings = collected
 					if err != nil {
@@ -109,7 +109,7 @@ func (a *app) newUpCmd() *cobra.Command {
 					return err
 				}
 				if stack.ZitadelEnabled() {
-					if err := a.phase("Exportando credencial de serviço do Zitadel", func() (string, error) {
+					if err := a.phase("Exporting the ZITADEL service credential", func() (string, error) {
 						if err := client.CaptureZitadelPAT(ctx, stack); err != nil {
 							return "", serviceError(err.Error())
 						}

@@ -366,6 +366,9 @@ func TestUpStopsAfterFailedPreflight(t *testing.T) {
 	if strings.Contains(stdout, "[preflight]") {
 		t.Fatalf("json output includes human progress: %q", stdout)
 	}
+	if hint := errorHint(err); hint != "" {
+		t.Fatalf("preflight failure has circular hint: %q", hint)
+	}
 }
 
 func TestUpPrintsWarningsAndContinues(t *testing.T) {

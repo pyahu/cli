@@ -25,18 +25,18 @@ func (a *app) newDownCmd() *cobra.Command {
 				if err != nil {
 					return clusterError(err.Error())
 				}
-				return a.phase("Removendo namespace "+stack.Cluster.Namespace, func() (string, error) {
+				return a.phase("Removing namespace "+stack.Cluster.Namespace, func() (string, error) {
 					if err := client.DeleteNamespace(ctx, stack.Cluster.Namespace); err != nil {
 						return "", serviceError(err.Error())
 					}
-					return "Namespace " + stack.Cluster.Namespace + " removido (cluster " + stack.Cluster.Name + " mantido)", nil
+					return "Namespace " + stack.Cluster.Namespace + " removed (cluster " + stack.Cluster.Name + " retained)", nil
 				})
 			}
-			return a.phase("Removendo cluster k3d "+stack.Cluster.Name, func() (string, error) {
+			return a.phase("Removing k3d cluster "+stack.Cluster.Name, func() (string, error) {
 				if err := rt.Delete(ctx, stack.Cluster.Name); err != nil {
 					return "", clusterError(err.Error())
 				}
-				return "Cluster " + stack.Cluster.Name + " removido", nil
+				return "Cluster " + stack.Cluster.Name + " removed", nil
 			})
 		},
 	}

@@ -42,9 +42,9 @@ func (a *app) newConnectorsApplyCmd() *cobra.Command {
 				return err
 			}
 
-			label := fmt.Sprintf("Registrando %d connector(s)", len(connectors))
+			label := fmt.Sprintf("Registering %d connector(s)", len(connectors))
 			if name != "" {
-				label = "Registrando o connector " + name
+				label = "Registering connector " + name
 			}
 			if err := a.phase(label, func() (string, error) {
 				if err := client.ApplyConnectors(cmd.Context(), stack, name); err != nil {
@@ -57,7 +57,7 @@ func (a *app) newConnectorsApplyCmd() *cobra.Command {
 			if a.opts.output == "json" {
 				return writeJSON(a.opts.out, map[string]any{"connectors": connectorNames(connectors), "applied": true})
 			}
-			a.info("%d connector(s) registrado(s); rode `pyahu connectors status` para ver as tasks", len(connectors))
+			a.info("%d connector(s) registered; run `pyahu connectors status` to inspect their tasks", len(connectors))
 			return nil
 		},
 	}

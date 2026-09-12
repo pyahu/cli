@@ -30,6 +30,10 @@ func dependencyError(msg string) error {
 	return codedError{code: 3, msg: msg}
 }
 
+func guidedDependencyError(msg string) error {
+	return codedError{code: 3, msg: msg, guided: true}
+}
+
 func clusterError(msg string) error {
 	return codedError{code: 4, msg: msg}
 }

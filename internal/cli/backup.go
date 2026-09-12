@@ -62,7 +62,7 @@ func (a *app) newBackupPostgresCmd() *cobra.Command {
 			}
 			defer file.Close()
 
-			if err := a.phase("Gerando dump do banco "+database, func() (string, error) {
+			if err := a.phase("Creating database dump for "+database, func() (string, error) {
 				if err := client.BackupPostgres(cmd.Context(), stack, database, file); err != nil {
 					return "", serviceError(err.Error())
 				}
@@ -136,7 +136,7 @@ func (a *app) newRestorePostgresCmd() *cobra.Command {
 			defer cleanup()
 			defer reader.Close()
 
-			if err := a.phase("Restaurando o banco "+database, func() (string, error) {
+			if err := a.phase("Restoring database "+database, func() (string, error) {
 				if err := client.RestorePostgres(cmd.Context(), stack, database, reader, kube.PostgresRestoreOptions{Clean: clean}); err != nil {
 					return "", serviceError(err.Error())
 				}

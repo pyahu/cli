@@ -123,17 +123,17 @@ func (a *app) newUpgradeCmd() *cobra.Command {
 			}
 
 			var binary []byte
-			if err := a.phase("Baixando pyahu "+release.Version, func() (string, error) {
+			if err := a.phase("Downloading pyahu "+release.Version, func() (string, error) {
 				downloaded, err := a.deps.downloadRelease(cmd.Context(), release)
 				if err != nil {
 					return "", serviceError(err.Error())
 				}
 				binary = downloaded
-				return "checksum conferido", nil
+				return "Checksum verified", nil
 			}); err != nil {
 				return err
 			}
-			if err := a.phase("Instalando em "+displayPath(executable), func() (string, error) {
+			if err := a.phase("Installing to "+displayPath(executable), func() (string, error) {
 				if err := a.deps.replaceBinary(executable, binary); err != nil {
 					return "", codedError{code: 5, msg: upgradeWriteHint(err), guided: true}
 				}

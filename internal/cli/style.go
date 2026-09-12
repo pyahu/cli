@@ -46,7 +46,7 @@ func (s styler) bad(t string) string    { return s.paint("1;31", t) }
 
 func (a *app) resolveTTYColor() {
 	a.colorOnce.Do(func() {
-		a.ttyVal = isTerminalWriter(a.opts.out)
+		a.ttyVal = isTerminalWriter(a.opts.out) && terminalSupportsControlSequences()
 		a.colorVal = a.ttyVal &&
 			a.opts.output == "human" &&
 			!a.opts.noColor &&
@@ -122,7 +122,12 @@ func stderrColor(opts options) bool {
 	return opts.output != "json" &&
 		!opts.noColor &&
 		os.Getenv("NO_COLOR") == "" &&
+		terminalSupportsControlSequences() &&
 		isTerminalWriter(opts.err)
+}
+
+func terminalSupportsControlSequences() bool {
+	return !strings.EqualFold(strings.TrimSpace(os.Getenv("TERM")), "dumb")
 }
 
 func durationShort(d time.Duration) string {

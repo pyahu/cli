@@ -55,6 +55,13 @@ func TestDurationShort(t *testing.T) {
 	}
 }
 
+func TestTermDumbDisablesControlSequences(t *testing.T) {
+	t.Setenv("TERM", "dumb")
+	if terminalSupportsControlSequences() {
+		t.Fatal("TERM=dumb should disable colors and animated progress")
+	}
+}
+
 func TestPhaseNonInteractiveHumanPrintsResult(t *testing.T) {
 	var buf bytes.Buffer
 	a := newApp("t", "c", "d", &buf, &buf)
