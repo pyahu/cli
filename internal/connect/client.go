@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -99,6 +100,24 @@ func (c *Client) Connectors(ctx context.Context) ([]Connector, error) {
 	}
 	sort.Slice(connectors, func(i, j int) bool { return connectors[i].Name < connectors[j].Name })
 	return connectors, nil
+}
+
+// Delete removes a registered connector. A missing connector is already in the
+// desired state, which keeps reconciliation idempotent.
+func (c *Client) Delete(ctx context.Context, name string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/connectors/"+url.PathEscape(name), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("call Kafka Connect at %s: %w", c.baseURL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	return fmt.Errorf("Kafka Connect DELETE /connectors/%s returned %s", name, resp.Status)
 }
 
 // Healthy reports whether every task is RUNNING. A connector with no tasks is

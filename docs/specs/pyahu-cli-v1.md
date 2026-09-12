@@ -109,7 +109,10 @@ Command behavior:
 
 - `pyahu init` writes a starter `pyahu.yaml`.
 - `pyahu init --preset platform` writes all v1 infrastructure services.
-- `pyahu up` creates or reconciles the k3d cluster and all enabled services.
+- `pyahu up` creates or reconciles the k3d cluster and all enabled services. It
+  prunes obsolete Pyahu-owned Kubernetes resources and previously inventoried
+  Kafka Connect registrations. PVCs and Kafka topics remain data-retentive by
+  default.
 - `pyahu status` shows cluster, service, endpoint, and readiness state.
 - `pyahu services` lists enabled services, readiness, versions, and local
   endpoints.

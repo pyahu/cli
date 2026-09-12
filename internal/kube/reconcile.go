@@ -35,6 +35,10 @@ func newResourceInventory() resourceInventory {
 func desiredResourceInventory(stack *schema.Stack) (resourceInventory, error) {
 	desired := newResourceInventory()
 	desired.secrets["pyahu-local-credentials"] = struct{}{}
+	// Keep the last Kafka Connect ownership inventory even while the worker is
+	// disabled. If it is enabled again, registrations restored from Kafka's
+	// internal topics can still be pruned safely.
+	desired.configMaps[kafkaConnectInventoryConfigMapName] = struct{}{}
 
 	for name := range stack.ConfigMaps {
 		desired.configMaps[name] = struct{}{}

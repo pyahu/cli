@@ -192,6 +192,9 @@ func (c *Client) WaitForStack(ctx context.Context, stack *schema.Stack) ([]strin
 		if err != nil {
 			return warnings, err
 		}
+		if err := c.reconcileKafkaConnectors(ctx, stack); err != nil {
+			return warnings, fmt.Errorf("reconcile kafka connect connectors: %w", err)
+		}
 	}
 	if stack.KafkaUIEnabled() {
 		if err := c.WaitForService(ctx, stack.Cluster.Namespace, "kafka-ui", 3*time.Minute); err != nil {

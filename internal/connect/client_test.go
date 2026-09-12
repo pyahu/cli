@@ -89,6 +89,42 @@ func TestClientReportsHTTPAndJSONErrors(t *testing.T) {
 	}
 }
 
+func TestDeleteConnectorIsIdempotent(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		requests++
+		if request.Method != http.MethodDelete || request.URL.Path != "/connectors/orders-source" {
+			t.Fatalf("unexpected request: %s %s", request.Method, request.URL.Path)
+		}
+		if requests == 1 {
+			response.WriteHeader(http.StatusNoContent)
+			return
+		}
+		response.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(server.Close)
+
+	client := New(server.URL)
+	if err := client.Delete(context.Background(), "orders-source"); err != nil {
+		t.Fatalf("delete existing connector: %v", err)
+	}
+	if err := client.Delete(context.Background(), "orders-source"); err != nil {
+		t.Fatalf("delete missing connector: %v", err)
+	}
+}
+
+func TestDeleteConnectorReportsUnexpectedStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusConflict)
+	}))
+	t.Cleanup(server.Close)
+
+	err := New(server.URL).Delete(context.Background(), "orders-source")
+	if err == nil || !strings.Contains(err.Error(), "409 Conflict") {
+		t.Fatalf("unexpected delete error: %v", err)
+	}
+}
+
 func TestHealthyRequiresEveryDeclaredTaskToRun(t *testing.T) {
 	tests := []struct {
 		name       string

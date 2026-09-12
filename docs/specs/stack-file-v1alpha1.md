@@ -507,6 +507,11 @@ Defaults:
 - topic `partitions`: `1`
 - topic `replicas`: `1` and no greater than the number of Kafka brokers
 
+Topics are data-bearing resources. `pyahu up` creates missing declared topics,
+but it does not delete topics removed from the stack file or rewrite an existing
+topic's partition/replication layout. This avoids data loss from an accidental
+configuration edit; make those lifecycle changes explicitly with Kafka tooling.
+
 Connection output:
 
 - `KAFKA_BOOTSTRAP_SERVERS`
@@ -604,6 +609,13 @@ registers it afterwards. Non-optional connectors keep failing `up`.
 exits non-zero when any task is not `RUNNING` or a connector has no tasks: a
 connector stays `RUNNING` while its only task is `FAILED`, and that silent stop is
 what connector-level checks miss.
+
+After a successful `pyahu up`, Pyahu records the declared connector names in a
+stack-scoped ConfigMap. On later runs it deletes a previously recorded connector
+that is no longer declared. Connectors registered manually against the same
+worker are not in that ownership inventory and are left untouched. The inventory
+is retained while Kafka Connect is disabled so restored registrations can be
+pruned safely if the worker is enabled again.
 
 Kafka Connect requires Kafka. Debezium PostgreSQL connectors also require
 PostgreSQL. V1 supports a declarative PostgreSQL Debezium source shortcut and
