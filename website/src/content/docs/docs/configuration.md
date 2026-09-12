@@ -78,6 +78,16 @@ domain, use `services.zitadel.externalURL`.
 All host port mappings bind to the IPv4 loopback address (`127.0.0.1`) so the
 local services are not published on LAN or other external interfaces.
 
+## Kubernetes version
+
+Pyahu defaults to `rancher/k3s:v1.36.4-k3s1`, matching the Kubernetes 1.36
+`client-go` dependency used by the CLI. The real smoke workflow tests that
+default and the previous supported minor, currently k3s 1.35.
+
+You can set `cluster.k3sVersion` to another image tag when necessary, but
+versions outside that tested window are best effort. The default and the tested
+previous minor are updated as Kubernetes support moves forward.
+
 Do not use `cluster.ports` in presets or new documentation. The CLI keeps silent compatibility with this legacy format, but it is not the v1 surface.
 
 :::caution[Upgrading from an old `pyahu.yaml`]

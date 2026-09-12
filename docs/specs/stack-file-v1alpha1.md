@@ -208,7 +208,7 @@ Validation rules:
 cluster:
   runtime: k3d
   name: demo
-  k3sVersion: ""      # optional; default chosen by Pyahu
+  k3sVersion: rancher/k3s:v1.36.4-k3s1
   servers: 1
   agents: 0
 ```
@@ -217,8 +217,13 @@ Defaults:
 
 - `runtime`: `k3d`
 - `name`: `metadata.name`
+- `k3sVersion`: `rancher/k3s:v1.36.4-k3s1`
 - `servers`: `1`
 - `agents`: `0`
+
+The default k3s minor matches the CLI's `client-go` minor. CI exercises the
+default and the previous Kubernetes minor; explicitly configured versions
+outside that window are best effort.
 
 Host ports are configured under each service. Early prerelease `cluster.ports`
 files are still accepted for migration, but new stack files should not use that

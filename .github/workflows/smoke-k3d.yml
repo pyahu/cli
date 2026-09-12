@@ -24,6 +24,17 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            k3s-image: ""
+          - name: previous-supported-minor
+            k3s-image: rancher/k3s:v1.35.8-k3s1
+    name: Smoke (${{ matrix.name }})
+    env:
+      PYAHU_E2E_K3S_IMAGE: ${{ matrix.k3s-image }}
     steps:
       - uses: actions/checkout@v4
 

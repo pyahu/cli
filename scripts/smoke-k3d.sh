@@ -42,6 +42,12 @@ done
 export XDG_CONFIG_HOME="$temp_dir/config"
 mkdir -p "$XDG_CONFIG_HOME"
 
+cluster_config=""
+if [[ -n "${PYAHU_E2E_K3S_IMAGE:-}" ]]; then
+  cluster_config="cluster:
+  k3sVersion: $PYAHU_E2E_K3S_IMAGE"
+fi
+
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM
@@ -62,6 +68,7 @@ apiVersion: cli.pyahu.io/v1alpha1
 kind: Stack
 metadata:
   name: $cluster_name
+$cluster_config
 services:
   postgres:
     enabled: true
@@ -84,6 +91,7 @@ apiVersion: cli.pyahu.io/v1alpha1
 kind: Stack
 metadata:
   name: $cluster_name
+$cluster_config
 services:
   postgres:
     enabled: true

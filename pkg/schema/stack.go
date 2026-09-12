@@ -18,7 +18,7 @@ const (
 	Kind       = "Stack"
 
 	DefaultRuntime             = "k3d"
-	DefaultK3SImage            = "rancher/k3s:v1.31.3-k3s1"
+	DefaultK3SImage            = "rancher/k3s:v1.36.4-k3s1"
 	DefaultHTTPPort            = 80
 	DefaultHTTPSPort           = 443
 	DefaultPostgresVersion     = "18.4"
