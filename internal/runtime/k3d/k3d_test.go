@@ -26,10 +26,10 @@ func TestRenderConfigIncludesPostgresReadPortWhenReadReplicasEnabled(t *testing.
 		t.Fatal(err)
 	}
 	config := string(data)
-	if !strings.Contains(config, "5432:30543") {
+	if !strings.Contains(config, "127.0.0.1:5432:30543") {
 		t.Fatalf("missing postgres primary port:\n%s", config)
 	}
-	if !strings.Contains(config, "5433:30544") {
+	if !strings.Contains(config, "127.0.0.1:5433:30544") {
 		t.Fatalf("missing postgres read port:\n%s", config)
 	}
 }
@@ -49,7 +49,7 @@ func TestRenderConfigIncludesKafkaConnectPortWhenEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	config := string(data)
-	if !strings.Contains(config, "8083:30083") {
+	if !strings.Contains(config, "127.0.0.1:8083:30083") {
 		t.Fatalf("missing kafka connect port:\n%s", config)
 	}
 }
@@ -69,7 +69,7 @@ func TestRenderConfigRoutesKafkaUIThroughTraefikEntrypoints(t *testing.T) {
 		t.Fatal(err)
 	}
 	config := string(data)
-	if !strings.Contains(config, "80:80") || !strings.Contains(config, "443:443") {
+	if !strings.Contains(config, "127.0.0.1:80:80") || !strings.Contains(config, "127.0.0.1:443:443") {
 		t.Fatalf("missing traefik entrypoints for kafka-ui:\n%s", config)
 	}
 	if strings.Contains(config, "8084") {
@@ -93,10 +93,10 @@ func TestRenderConfigOmitsZitadelHTTPSPortWhenLocalTLSDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	config := string(data)
-	if !strings.Contains(config, "80:80") {
+	if !strings.Contains(config, "127.0.0.1:80:80") {
 		t.Fatalf("missing traefik web entrypoint:\n%s", config)
 	}
-	if strings.Contains(config, "443:443") {
+	if strings.Contains(config, "127.0.0.1:443:443") {
 		t.Fatalf("unexpected traefik websecure entrypoint:\n%s", config)
 	}
 }
@@ -155,6 +155,32 @@ ports:
 	}
 }
 
+func TestMissingDesiredPortsRejectsUnboundExistingMapping(t *testing.T) {
+	dir := t.TempDir()
+	existingPath := filepath.Join(dir, "k3d.yaml")
+	existing := []byte(`apiVersion: k3d.io/v1alpha5
+kind: Simple
+ports:
+  - port: 5432:30543
+`)
+	if err := os.WriteFile(existingPath, existing, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	desired := []byte(`apiVersion: k3d.io/v1alpha5
+kind: Simple
+ports:
+  - port: 127.0.0.1:5432:30543
+`)
+
+	missing, err := missingDesiredPorts(existingPath, desired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(missing) != 1 || missing[0] != "127.0.0.1:5432:30543" {
+		t.Fatalf("missing ports = %#v", missing)
+	}
+}
+
 func TestRenderConfigIncludesRedisPortWhenEnabled(t *testing.T) {
 	stack := &schema.Stack{
 		APIVersion: schema.APIVersion,
@@ -171,7 +197,7 @@ func TestRenderConfigIncludesRedisPortWhenEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "port: 6380:30379") {
+	if !strings.Contains(string(data), "port: 127.0.0.1:6380:30379") {
 		t.Fatalf("redis port mapping missing:\n%s", data)
 	}
 }

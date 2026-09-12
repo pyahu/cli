@@ -75,6 +75,9 @@ through Traefik on 80/443 with `*.localhost` hostnames (`https://kafka-ui.localh
 `https://rabbitmq.localhost`, `https://zitadel.localhost`). To change the ZITADEL
 domain, use `services.zitadel.externalURL`.
 
+All host port mappings bind to the IPv4 loopback address (`127.0.0.1`) so the
+local services are not published on LAN or other external interfaces.
+
 Do not use `cluster.ports` in presets or new documentation. The CLI keeps silent compatibility with this legacy format, but it is not the v1 surface.
 
 :::caution[Upgrading from an old `pyahu.yaml`]

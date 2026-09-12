@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	loopbackHost         = "127.0.0.1"
 	nodePortPostgres     = 30543
 	nodePortPostgresRead = 30544
 	nodePortKafka        = 30092
@@ -22,6 +23,10 @@ const (
 	nodePortRedis        = 30379
 	nodePortRabbitMQ     = 30672
 )
+
+func loopbackPort(hostPort, containerPort int) string {
+	return fmt.Sprintf("%s:%d:%d", loopbackHost, hostPort, containerPort)
+}
 
 type Runtime struct {
 	Out     io.Writer
@@ -191,28 +196,28 @@ func RenderConfig(stack *schema.Stack) ([]byte, error) {
 	// HTTP/HTTPS services share the Traefik entrypoints on host 80/443 (the k3d
 	// loadbalancer). Each gets an Ingress with its own *.localhost hostname.
 	if stack.HTTPIngressEnabled() {
-		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:80", schema.DefaultHTTPPort), NodeFilters: []string{"loadbalancer"}})
+		cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(schema.DefaultHTTPPort, 80), NodeFilters: []string{"loadbalancer"}})
 		if stack.LocalTLSEnabled() {
-			cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:443", schema.DefaultHTTPSPort), NodeFilters: []string{"loadbalancer"}})
+			cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(schema.DefaultHTTPSPort, 443), NodeFilters: []string{"loadbalancer"}})
 		}
 	}
 	if stack.PostgresEnabled() {
-		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.PostgresPort(), nodePortPostgres), NodeFilters: []string{"server:0"}})
+		cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(stack.PostgresPort(), nodePortPostgres), NodeFilters: []string{"server:0"}})
 		if stack.PostgresReadReplicas() > 0 {
-			cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.PostgresReadPort(), nodePortPostgresRead), NodeFilters: []string{"server:0"}})
+			cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(stack.PostgresReadPort(), nodePortPostgresRead), NodeFilters: []string{"server:0"}})
 		}
 	}
 	if stack.KafkaEnabled() {
-		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.KafkaPort(), nodePortKafka), NodeFilters: []string{"server:0"}})
+		cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(stack.KafkaPort(), nodePortKafka), NodeFilters: []string{"server:0"}})
 	}
 	if stack.KafkaConnectEnabled() {
-		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.KafkaConnectPort(), nodePortKafkaConnect), NodeFilters: []string{"server:0"}})
+		cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(stack.KafkaConnectPort(), nodePortKafkaConnect), NodeFilters: []string{"server:0"}})
 	}
 	if stack.RabbitMQEnabled() {
-		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.RabbitMQPort(), nodePortRabbitMQ), NodeFilters: []string{"server:0"}})
+		cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(stack.RabbitMQPort(), nodePortRabbitMQ), NodeFilters: []string{"server:0"}})
 	}
 	if stack.RedisEnabled() {
-		cfg.Ports = append(cfg.Ports, portMapping{Port: fmt.Sprintf("%d:%d", stack.RedisPort(), nodePortRedis), NodeFilters: []string{"server:0"}})
+		cfg.Ports = append(cfg.Ports, portMapping{Port: loopbackPort(stack.RedisPort(), nodePortRedis), NodeFilters: []string{"server:0"}})
 	}
 
 	cfg.Volumes = append(cfg.Volumes, volumeMapping{
