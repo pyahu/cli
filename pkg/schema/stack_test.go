@@ -67,3 +67,29 @@ func TestConnectionURLsEscapeCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalTLSRequiredForEveryIngressService(t *testing.T) {
+	tests := []struct {
+		name     string
+		services Services
+		want     bool
+	}{
+		{name: "no ingress", services: Services{Postgres: &PostgresService{}}, want: false},
+		{name: "zitadel", services: Services{Zitadel: &ZitadelService{}}, want: true},
+		{name: "rabbitmq management", services: Services{RabbitMQ: &RabbitMQService{}}, want: true},
+		{name: "kafka ui", services: Services{Kafka: &KafkaService{}, KafkaUI: &KafkaUIService{}}, want: true},
+		{name: "disabled TLS", services: Services{Kafka: &KafkaService{}, KafkaUI: &KafkaUIService{}}, want: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stack := &Stack{Metadata: Metadata{Name: "demo"}, Services: test.services}
+			if test.name == "disabled TLS" {
+				stack.LocalTLS.Enabled = Bool(false)
+			}
+			stack.SetDefaults()
+			if got := stack.LocalTLSRequired(); got != test.want {
+				t.Fatalf("LocalTLSRequired() = %t, want %t", got, test.want)
+			}
+		})
+	}
+}

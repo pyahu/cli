@@ -976,7 +976,7 @@ func (s *Stack) LocalTLSEnabled() bool {
 }
 
 func (s *Stack) LocalTLSRequired() bool {
-	return s.LocalTLSEnabled() && s.ZitadelEnabled()
+	return s.LocalTLSEnabled() && s.HTTPIngressEnabled()
 }
 
 func (s *Stack) LocalTLSDomains() []string {
