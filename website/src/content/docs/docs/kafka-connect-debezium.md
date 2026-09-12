@@ -238,9 +238,23 @@ During `pyahu up`, the CLI:
 3. Renders or reads the connector JSON from `services.kafkaConnect.connectors`.
 4. Writes that JSON into a Secret as `connector.json`.
 5. Creates a Job that waits for Connect to respond and runs `PUT /connectors/<name>/config`.
-6. Waits for the connector status to become `RUNNING`.
+6. Waits for every connector task to become `RUNNING`.
 
 When you change the configuration, the Secret and the Job receive a name with a hash of the payload. This makes the apply idempotent and lets you reapply changes with another `pyahu up`.
+
+## Removing a managed connector
+
+After a successful `pyahu up`, Pyahu stores the names of the connectors managed
+by this stack. On a later run, it deletes a registration that is in that
+inventory but no longer appears in `pyahu.yaml`.
+
+Connectors created manually through the REST API or another tool are not added
+to the inventory and are left alone. The inventory remains in the cluster when
+Kafka Connect is disabled, so registrations restored from Kafka's internal
+topics can still be reconciled if the service is enabled again.
+
+Removing a connector registration does not delete the Kafka topics or other
+service data it used.
 
 ## Inspecting the connector
 

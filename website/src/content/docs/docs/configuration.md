@@ -1,9 +1,10 @@
 ---
 title: Configuration
-description: Basic structure of pyahu.yaml and important v1 rules.
+description: Choose services, ports, resources and local credentials in pyahu.yaml.
 ---
 
-The default file is `pyahu.yaml`. The CLI searches for this file from the current directory upward. Use `--file` or `-f` when you want to point to a different path.
+The default project file is `pyahu.yaml`. The CLI searches for it from the
+current directory upward. Use `--file` or `-f` to point to another path.
 
 ## Minimal example
 
@@ -78,6 +79,31 @@ domain, use `services.zitadel.externalURL`.
 All host port mappings bind to the IPv4 loopback address (`127.0.0.1`) so the
 local services are not published on LAN or other external interfaces.
 
+## Apply or recreate?
+
+`pyahu up` reconciles the Kubernetes resources generated from the current
+file. It updates service configuration, images, Secrets, ConfigMaps, workloads,
+topics and connector registrations without requiring a new cluster.
+
+Some settings belong to k3d itself and are fixed at cluster creation:
+
+- cluster name, server and agent counts;
+- k3s image and Docker network;
+- the persistent storage bind;
+- host port mappings.
+
+If one of these settings changes, `pyahu up` reports the exact drift. Recreate
+the cluster to apply it:
+
+```bash
+pyahu down
+pyahu up
+```
+
+Plain `pyahu down` retains the bound service data, so this is the normal path
+for adding a service that needs a new host port. Removing services does not
+silently remove their persistent volume claims.
+
 ## Kubernetes version
 
 Pyahu defaults to `rancher/k3s:v1.36.4-k3s1`, matching the Kubernetes 1.36
@@ -110,7 +136,8 @@ Pyahu does not currently enforce host CPU, memory, or disk minimums in
 `doctor`; inspect the resources assigned to Docker Desktop, Colima, or your
 other container runtime if pods remain pending or are OOM-killed.
 
-Do not use `cluster.ports` in presets or new documentation. The CLI keeps silent compatibility with this legacy format, but it is not the v1 surface.
+Do not use `cluster.ports` in new files. The CLI accepts the legacy format for
+compatibility, but service-owned port fields are the supported surface.
 
 :::caution[Upgrading from an old `pyahu.yaml`]
 `pyahu init` already generates the new format. If your file was created by an
@@ -164,10 +191,28 @@ The global file is loaded first; the project's `pyahu.yaml` overrides the values
 
 ## Local credentials
 
-PostgreSQL, Zitadel, and RabbitMQ credentials can live in the local `pyahu.yaml` or in the global config.
+PostgreSQL, ZITADEL and RabbitMQ credentials can live in the project
+`pyahu.yaml` or in the global config.
 Credentials embedded in PostgreSQL, RabbitMQ, and Redis connection URLs are
 percent-encoded, so passwords containing characters such as `@`, `:`, or `/`
 remain valid. The separate password environment variables retain their original
 unencoded values.
 
-For PostgreSQL, changing the password after the volume already exists updates the Secrets and the CLI output, but the user inside the database may keep the old password. For local rotation, recreate the cluster or alter the role inside PostgreSQL.
+Command summaries mask credentials. Run `pyahu env` when an application needs
+the real values.
+
+For PostgreSQL, changing the password after the volume already exists updates
+the Secret and CLI output, but the user inside the database may keep the old
+password. Change the role password inside PostgreSQL or reset the stored data.
+
+## Data lifecycle
+
+`pyahu down` removes the k3d cluster and retains local data under
+`~/.pyahu/clusters/<cluster>/storage`. `pyahu down --purge-data` permanently
+removes that directory after confirmation.
+
+For Kafka Connect, a successful `pyahu up` records the connector names managed
+by the stack. A previously managed connector is deleted when its name is
+removed from `pyahu.yaml`; connectors registered manually are left alone.
+Kafka topics and service volumes are retained unless you explicitly purge the
+stack data.

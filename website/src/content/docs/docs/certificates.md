@@ -3,7 +3,10 @@ title: Local certificates
 description: How the Pyahu CLI generates and installs local TLS for localhost and *.localhost.
 ---
 
-Pyahu does not use a public CA for `.localhost`. The CLI generates a local CA, creates a certificate for `localhost` and `*.localhost`, and writes the TLS pair to the Kubernetes Secret `pyahu-local-tls`.
+When at least one HTTP UI is enabled, Pyahu generates a local CA, creates a
+certificate for `localhost` and `*.localhost`, and writes the TLS pair to the
+Kubernetes Secret `pyahu-local-tls`. A public CA cannot issue certificates for
+these local names.
 
 The `*.localhost` wildcard covers all HTTP UIs behind Traefik
 (`zitadel.localhost`, `kafka-ui.localhost`, `rabbitmq.localhost`), so trusting the
@@ -33,7 +36,9 @@ domains:       *.localhost, localhost
 pyahu certs trust
 ```
 
-On macOS, the command uses the system trust store and may ask for a password. After that, `curl` and browsers such as Safari/Chrome should accept `https://zitadel.localhost`.
+On macOS, the command uses the system trust store and may ask for a password.
+After that, command-line clients and browsers should accept the enabled local
+UIs over HTTPS.
 
 ```bash
 curl https://zitadel.localhost/debug/healthz

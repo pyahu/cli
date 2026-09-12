@@ -3,9 +3,9 @@ title: Installation
 description: Install the Pyahu CLI on macOS, Linux, or Windows and set up the local dependencies.
 ---
 
-The Pyahu CLI is a single binary, with no runtime. Every release is published to
-[GitHub Releases](https://github.com/pyahu/cli/releases) — macOS, Linux, and Windows (amd64 and
-arm64), plus `checksums.txt`. Every method below downloads from there.
+Pyahu is distributed as a single binary. Releases for macOS, Linux and Windows
+(amd64 and arm64) are published on
+[GitHub Releases](https://github.com/pyahu/cli/releases) with `checksums.txt`.
 
 ## Prerequisites
 
@@ -38,8 +38,7 @@ mise install
 "github:pyahu/cli" = "<resolved-version>"
 ```
 
-mise's `github:` backend pulls the release from GitHub, verifies the artifact attestation, and
-extracts the binary — no script in between.
+mise's `github:` backend downloads and extracts the matching GitHub release.
 
 ## Pyahu toolchain
 
@@ -54,8 +53,8 @@ mise install
 
 ## Installation script (macOS and Linux)
 
-The quickest way onto a single machine. The script detects the OS and architecture, downloads the release from
-GitHub, and installs it to `/usr/local/bin`:
+The script detects the OS and architecture, downloads the release from GitHub,
+verifies its checksum and installs it to `/usr/local/bin`:
 
 ```bash
 curl -fsSL https://cli.pyahu.io/install.sh | sh
@@ -70,13 +69,12 @@ curl -fsSL https://cli.pyahu.io/install.sh | sh -s -- --bin-dir "$HOME/.local/bi
 To pin a specific version:
 
 ```bash
-curl -fsSL https://cli.pyahu.io/install.sh | sh -s -- --version v1.2.3
+curl -fsSL https://cli.pyahu.io/install.sh | sh -s -- --version v0.10.1
 ```
 
-Auditing it before running is simple: `curl -fsSL https://cli.pyahu.io/install.sh` shows the
-contents. The script verifies the archive's SHA-256 against the `checksums.txt` published with
-the same release before extracting it. To update, use `pyahu upgrade` (below) or run the script
-again.
+To inspect the script before running it, download or print it first. Its archive
+check uses the SHA-256 value in the `checksums.txt` published with the same
+release. To update, use `pyahu upgrade` or run the script again.
 
 ## go install
 

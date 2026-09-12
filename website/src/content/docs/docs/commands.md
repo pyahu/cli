@@ -7,7 +7,7 @@ This is the complete Pyahu CLI reference. Every command accepts the global flags
 next section. Most support `--output json` for use in scripts.
 
 ```text
-pyahu [comando] [flags]
+pyahu [command] [flags]
 ```
 
 ## Global flags
@@ -73,7 +73,7 @@ Human output at the end:
 Pyahu local stack is ready
 cluster:    pyahu-local
 namespace:  pyahu-local-dev
-kubeconfig: /home/voce/.config/k3d/kubeconfig-pyahu-local.yaml
+kubeconfig: /home/user/.config/k3d/kubeconfig-pyahu-local.yaml
 
 POSTGRES_URL                 postgresql://pyahu:hidden@localhost:5432/app?sslmode=disable
 POSTGRES_PASSWORD            <hidden>
@@ -88,9 +88,9 @@ URLs in both human and JSON output. Use the explicit `pyahu env` command when an
 application needs the real connection values.
 
 :::caution
-Changing host ports after the cluster exists requires recreating the cluster. k3d fixes the
-mappings at creation time. `pyahu up` detects missing mappings and asks for `pyahu down` followed
-by `pyahu up`.
+Some cluster settings are fixed when k3d creates the cluster. `pyahu up` detects
+changes to its topology, k3s image, network, persistent storage mapping or
+required host ports and asks for `pyahu down` followed by `pyahu up`.
 :::
 
 ### `pyahu down`
@@ -235,8 +235,8 @@ Prints the connection variables for local apps.
 | `--format` | `shell` | `shell` (with `export`), `dotenv`, or `json`. |
 
 ```bash
-pyahu env                 # export VAR='valor'
-pyahu env --format dotenv # VAR=valor
+pyahu env                 # export VAR='value'
+pyahu env --format dotenv # VAR=value
 pyahu env --format json
 eval "$(pyahu env)"       # loads into the current shell
 ```
@@ -288,7 +288,7 @@ Restores a custom PostgreSQL dump from a local file or from `s3://`.
 
 ```bash
 pyahu restore postgres app --source ./backups/pyahu-local-app-20260622-131500.dump
-pyahu restore postgres app --source s3://meu-bucket/dev/app.dump --yes
+pyahu restore postgres app --source s3://my-bucket/dev/app.dump --yes
 pyahu restore postgres app \
   --source s3://bucket/app.dump \
   --s3-endpoint-url http://localhost:9000 \
@@ -323,6 +323,13 @@ and recreates the registration Job.
 pyahu connectors apply
 pyahu connectors apply --name checkout-outbox
 ```
+
+A successful, waiting `pyahu up` also reconciles connector ownership. It records
+the connector names managed by this stack and deletes a previously managed
+registration after its name is removed from `pyahu.yaml`. Connectors created
+manually against the same worker are not in that inventory and are left alone.
+The inventory is kept if Kafka Connect is temporarily disabled, so it can be
+used safely when the service is enabled again.
 
 ### `pyahu connectors status`
 
@@ -513,7 +520,7 @@ this binary for the one inside the archive.
 ```bash
 pyahu upgrade
 pyahu upgrade --yes
-pyahu upgrade --yes --version v0.6.1   # downgrade
+pyahu upgrade --yes --version v0.10.0 # install or roll back to a specific release
 ```
 
 The new binary is written next to the current one and renamed over it: the swap is atomic on the

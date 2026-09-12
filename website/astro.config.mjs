@@ -6,7 +6,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Pyahu CLI",
-      description: "Pyahu CLI documentation for local development infrastructure.",
+      description: "Run local application services on k3d from one project file.",
       logo: {
         src: "./src/assets/pyahu-logo.svg",
         alt: "Pyahu",
@@ -17,17 +17,18 @@ export default defineConfig({
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/pyahu/cli" }],
       sidebar: [
         {
-          label: "Introduction",
+          label: "Start here",
           items: [
-            { label: "Overview", slug: "docs" },
+            { label: "Getting started", slug: "docs" },
             { label: "Installation", slug: "docs/installation" },
-            { label: "Commands", slug: "docs/commands" }
+            { label: "Configuration", slug: "docs/configuration" },
+            { label: "Commands", slug: "docs/commands" },
+            { label: "Troubleshooting", slug: "docs/troubleshooting" }
           ]
         },
         {
           label: "Guides",
           items: [
-            { label: "Configuration", slug: "docs/configuration" },
             { label: "Kafka Connect & Debezium", slug: "docs/kafka-connect-debezium" },
             { label: "Local certificates", slug: "docs/certificates" },
             { label: "Backup & restore", slug: "docs/backup-restore" }

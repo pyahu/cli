@@ -5,7 +5,7 @@
 <h1 align="center">Pyahu CLI</h1>
 
 <p align="center">
-  Your local development stack in a single command.
+  Run local application services on k3d from one project file.
 </p>
 
 <p align="center">
@@ -23,183 +23,175 @@
 
 ---
 
-Pyahu CLI provisions a local development stack on a [k3d](https://k3d.io) cluster
-with lightweight Kubernetes manifests the CLI generates for you. One command
-brings up PostgreSQL, ZITADEL, RabbitMQ, Redis, Kafka, Kafka Connect with Debezium,
-and Kafka UI, with local TLS and predictable endpoints, and without turning your
-setup into a side project.
+Pyahu creates a local k3d cluster and runs the services your application needs.
+The setup lives in `pyahu.yaml`, so a team can keep the same ports, service
+versions and defaults next to its code.
 
-Its control layer is intentionally lightweight: k3d plus generated resources,
-without Helm releases or extra in-cluster operators. The complete platform
-preset still runs seven real services and therefore needs meaningful Docker
-resources; see the [resource guidance](https://cli.pyahu.io/docs/configuration#resource-requirements).
-Normal operation does not require `kubectl` or `helm`.
+The normal workflow uses a few CLI commands. When something needs debugging,
+the generated Kubernetes resources remain available through `kubectl`.
 
-```console
-$ pyahu init --preset platform
-$ pyahu up
-✓ Checking local dependencies  (137ms)
-✓ Cluster pyahu-local created  (8.4s)
-✓ Waiting for the Kubernetes API  (3.1s)
-✓ Configuring services: postgres, zitadel, rabbitmq, redis, kafka, kafka-connect, kafka-ui
+## Quick start
 
-✓ Pyahu local stack is ready
-```
-
-## What it provisions
-
-| Service | Role | Endpoint |
-| --- | --- | --- |
-| PostgreSQL | Relational database (optional read replicas) | `localhost:5432` |
-| ZITADEL | Identity & OIDC over local HTTPS | `https://zitadel.localhost` |
-| RabbitMQ | AMQP messaging + management UI | `localhost:5672` · `https://rabbitmq.localhost` |
-| Redis | Valkey key-value store, AOF on by default | `localhost:6379` |
-| Kafka | Event streaming broker (KRaft) | `localhost:9092` |
-| Kafka Connect | Declarative connectors and plugins, Debezium CDC | `http://localhost:8083` |
-| Kafka UI | Topics, connectors and consumers | `https://kafka-ui.localhost` |
-
-HTTP UIs go through Traefik on host 80/443 with `*.localhost` hostnames and a
-shared local TLS certificate. TCP services and the Kafka Connect REST API use
-dedicated host ports.
-
-Kafka Connect takes its plugins from the stack file, so a connector that does not ship with the
-Debezium image does not mean building one:
-
-```yaml
-services:
-  kafkaConnect:
-    plugins:
-      - name: redis-kafka-connect
-        url: https://github.com/redis-field-engineering/redis-kafka-connect/releases/download/v1.1.0/redis-redis-kafka-connect-1.1.0.zip
-        sha256: 7e4249ca356f702220cf09e9e150c8336e24824d7a72fce05d7999bf2a7e03df
-      - name: redis-kafka-connect      # same name = same plugin directory, for an SMT
-        file: connect-plugins/my-outbox-router.jar
-    connectors:
-      - name: orders-outbox
-        kind: debezium.postgres
-        optional: true                 # its table only exists after the app boots once
-        tables: { include: [public.outbox] }
-```
-
-An `optional` connector whose source does not exist yet is a warning during `pyahu up`, not a
-failure; `pyahu connectors apply` registers it after the first boot, and `pyahu connectors status`
-reports **every task**, because a connector stays `RUNNING` while its only task is `FAILED`.
-
-## Install
-
-Every release is published to
-[GitHub Releases](https://github.com/pyahu/cli/releases) — binaries for macOS, Linux and Windows
-(amd64 and arm64), plus `checksums.txt`. Every install method below pulls from there.
-
-### mise
-
-Pinning the CLI next to the rest of a project's toolchain is the recommended way: everyone on the
-team gets the same version, and it is recorded in the repo.
-
-```bash
-# in a project, resolves latest and writes its exact version to ./mise.toml
-mise use --pin "github:pyahu/cli@latest"
-
-# or for your user, everywhere
-mise use -g --pin "github:pyahu/cli@latest"
-
-mise install
-```
-
-```toml
-# mise.toml
-[tools]
-"github:pyahu/cli" = "<resolved-version>"
-```
-
-### Pyahu toolchain
-
-The [Pyahu toolchain](https://github.com/pyahu/toolchain) already pins the CLI in its `cloud`
-profile, along with k3d, kubectl and the rest of the Kubernetes set. If you use it, you have the
-CLI:
-
-```bash
-export MISE_ENV=cloud    # add to your shell rc
-mise install
-```
-
-### Install script (macOS and Linux)
-
-Downloads the release for your platform from GitHub Releases:
+You need Docker or Podman running and [k3d](https://k3d.io) 5.x installed.
 
 ```bash
 curl -fsSL https://cli.pyahu.io/install.sh | sh
 
-# pick an install dir, no sudo
-curl -fsSL https://cli.pyahu.io/install.sh | sh -s -- --bin-dir "$HOME/.local/bin"
+mkdir my-app && cd my-app
+pyahu init       # writes pyahu.yaml with PostgreSQL enabled
+pyahu doctor     # checks the container runtime, k3d and local ports
+pyahu up
+eval "$(pyahu env)"
 ```
 
-### go install
+Your application can now use the generated `POSTGRES_URL`. To see the service
+state and endpoint:
 
-```bash
-go install github.com/pyahu/cli/cmd/pyahu@latest   # Go 1.26+
+```console
+$ pyahu services
+cluster:   pyahu-local
+namespace: pyahu-local-dev
+state:     running
+
+SERVICE   STATUS  VERSION  ENDPOINTS
+postgres  ready   18.4     localhost:5432
 ```
 
-### Staying up to date
+## Why use it
 
-The CLI warns when it is behind, and `pyahu upgrade` replaces a binary it owns after verifying the
-release checksum. A binary managed by mise is left to mise, and the command says so.
+- **One project file.** Services, ports and local defaults are reviewable in
+  `pyahu.yaml`.
+- **A repeatable stack.** `pyahu up` creates or reconciles the same resources
+  for every developer.
+- **Real Kubernetes behavior.** Ingresses, Secrets, ConfigMaps and persistent
+  volumes run in k3d and can be inspected when needed.
+- **More than a database.** Database, identity, messaging and CDC can run
+  together without a separate setup for each service.
+
+If all you need is a disposable database and Kubernetes behavior does not
+matter, a single container may be simpler. Pyahu is most useful when a project
+has several dependencies or benefits from a local Kubernetes environment.
+
+## Choose a starting point
+
+| Preset | What it starts | Good for |
+| --- | --- | --- |
+| `minimal` | PostgreSQL | Small projects and constrained machines |
+| `platform` | All supported services | Applications that need the full dependency chain |
 
 ```bash
-pyahu check-update
-pyahu upgrade
+pyahu init --preset minimal    # default
+pyahu init --preset platform
 ```
 
-Full instructions, manual download and shell completion:
-[Installation docs](https://cli.pyahu.io/docs/installation).
+The full preset runs seven services. Allocate at least 4 CPU cores and 8 GiB of
+memory to the container runtime, with 15 GiB of free disk. Start with `minimal`
+if you are unsure.
 
-### Requirements
+## Included services
 
-- Docker or Podman, running
-- [k3d](https://k3d.io) 5.x
+| Service | Use | Local endpoint |
+| --- | --- | --- |
+| PostgreSQL | Databases and optional read replicas | `localhost:5432` |
+| ZITADEL | Identity and OIDC | `https://zitadel.localhost` |
+| RabbitMQ | AMQP and management UI | `localhost:5672` · `https://rabbitmq.localhost` |
+| Redis | Valkey-compatible data and streams | `localhost:6379` |
+| Kafka | Local event streaming with KRaft | `localhost:9092` |
+| Kafka Connect | Connectors, plugins and Debezium CDC | `http://localhost:8083` |
+| Kafka UI | Topics, consumers and connectors | `https://kafka-ui.localhost` |
 
-`pyahu doctor` checks these and your local ports before bringing the stack up.
+Services are enabled independently. A small stack can stay small:
 
-## Quick start
+```yaml
+apiVersion: cli.pyahu.io/v1alpha1
+kind: Stack
+metadata:
+  name: local-dev
+services:
+  postgres:
+    enabled: true
+    databases:
+      - name: app
+  redis:
+    enabled: true
+```
+
+See [Configuration](https://cli.pyahu.io/docs/configuration) for all supported
+fields and the changes that require recreating the cluster.
+
+## Everyday commands
 
 ```bash
-pyahu init --preset platform   # write pyahu.yaml (or --preset minimal)
-pyahu doctor                   # validate Docker/Podman, k3d and ports
-pyahu up                       # create the cluster and apply the services
-pyahu certs trust              # trust the local CA for https://*.localhost
+pyahu services                 # services, state and endpoints
+pyahu describe postgres        # configuration and pod details, with secrets masked
+pyahu logs postgres --follow   # service logs
+eval "$(pyahu env)"            # connection variables for the current shell
 
-pyahu services                 # list services and endpoints
-pyahu connectors apply         # register connectors whose source needed the app to boot
-pyahu connectors status        # connector and task state; non-zero if any task is not RUNNING
-eval "$(pyahu env)"            # load connection env vars into your shell
+export KUBECONFIG="$(pyahu kubeconfig)"
+kubectl get pods -n pyahu-local-dev
+
 pyahu down                     # remove the cluster and retain local data
-pyahu down --purge-data --yes  # also permanently remove retained local data
+pyahu down --purge-data --yes  # permanently remove retained data too
 ```
 
-The default stack file is `pyahu.yaml`, discovered from the current directory
-upward. See the [command reference](https://cli.pyahu.io/docs/comandos) for every
-command and flag.
+Host ports bind to `127.0.0.1`. Command summaries mask passwords and tokens;
+`pyahu env` is the explicit way to print real connection values. Local data is
+retained under `~/.pyahu/clusters/<cluster>/storage` unless `--purge-data` is
+used.
+
+## Kafka Connect and Debezium
+
+Connectors can live in the same project file as the rest of the stack:
+
+```yaml
+services:
+  kafkaConnect:
+    enabled: true
+    connectors:
+      - name: app-cdc
+        kind: debezium.postgres
+        database: app
+        tables:
+          include: [public.orders]
+```
+
+Pyahu applies the connector and checks each task, not only the top-level
+connector state. It removes registrations that were previously managed by this
+stack and are no longer declared, while leaving manually created connectors
+alone. Custom plugin downloads require a SHA-256 value.
+
+Read [Kafka Connect and Debezium](https://cli.pyahu.io/docs/kafka-connect-debezium)
+for optional connectors, custom plugins and sink configuration.
+
+## Install options
+
+- [mise](https://cli.pyahu.io/docs/installation#mise) to pin the CLI version in a project
+- the install script for macOS and Linux
+- `go install github.com/pyahu/cli/cmd/pyahu@latest` with Go 1.26+
+- archives for macOS, Linux and Windows from [GitHub Releases](https://github.com/pyahu/cli/releases)
+
+The install script and `pyahu upgrade` verify the checksum published with the
+release. Full instructions are in the [installation guide](https://cli.pyahu.io/docs/installation).
 
 ## Documentation
 
-- [Overview & getting started](https://cli.pyahu.io/docs)
+- [Getting started](https://cli.pyahu.io/docs)
 - [Commands](https://cli.pyahu.io/docs/commands)
 - [Configuration](https://cli.pyahu.io/docs/configuration)
-- [Kafka Connect & Debezium](https://cli.pyahu.io/docs/kafka-connect-debezium)
+- [Troubleshooting](https://cli.pyahu.io/docs/troubleshooting)
 - [Local certificates](https://cli.pyahu.io/docs/certificates)
-- [Backup & restore](https://cli.pyahu.io/docs/backup-restore)
+- [Backup and restore](https://cli.pyahu.io/docs/backup-restore)
 
 ## Scope
 
-The current v1 focus is **local infrastructure only**. Application deployment,
-remote clusters, and Telepresence-style workflows are intentionally out of scope.
+Pyahu focuses on local infrastructure. It does not deploy applications, manage
+remote clusters or replace production infrastructure tooling.
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the dev
-setup, build/test commands, and conventions. Please read the
-[Code of Conduct](CODE_OF_CONDUCT.md) and report security issues per the
-[security policy](SECURITY.md).
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the local
+setup and development commands. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md)
+and report vulnerabilities through the [security policy](SECURITY.md).
 
 ## License
 
