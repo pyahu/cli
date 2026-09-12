@@ -693,6 +693,12 @@ func (s *Stack) Validate() error {
 		}
 	}
 	if s.KafkaEnabled() {
+		if s.Services.Kafka.Replicas < 1 {
+			errs = append(errs, "services.kafka.replicas must be at least 1")
+		}
+		if s.Services.Kafka.Replicas != 1 {
+			errs = append(errs, "services.kafka.replicas currently must be 1; multi-broker KRaft is not supported yet")
+		}
 		for i, topic := range s.Services.Kafka.Topics {
 			if !topicNameRE.MatchString(topic.Name) {
 				errs = append(errs, fmt.Sprintf("services.kafka.topics[%d].name contains unsupported characters", i))
@@ -702,6 +708,8 @@ func (s *Stack) Validate() error {
 			}
 			if topic.Replicas < 1 {
 				errs = append(errs, fmt.Sprintf("services.kafka.topics[%d].replicas must be at least 1", i))
+			} else if topic.Replicas > s.Services.Kafka.Replicas {
+				errs = append(errs, fmt.Sprintf("services.kafka.topics[%d].replicas cannot exceed services.kafka.replicas", i))
 			}
 		}
 	}
@@ -807,6 +815,12 @@ func (s *Stack) Validate() error {
 		}
 	}
 	if s.RabbitMQEnabled() {
+		if s.Services.RabbitMQ.Replicas < 1 {
+			errs = append(errs, "services.rabbitmq.replicas must be at least 1")
+		}
+		if s.Services.RabbitMQ.Replicas != 1 {
+			errs = append(errs, "services.rabbitmq.replicas currently must be 1; clustering is not supported yet")
+		}
 		if strings.TrimSpace(s.RabbitMQUser()) == "" {
 			errs = append(errs, "services.rabbitmq.auth.username is required")
 		}

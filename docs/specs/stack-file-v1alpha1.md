@@ -406,7 +406,8 @@ Defaults:
 - `ports.amqp`: `5672`
 - `auth.username`: `pyahu`
 - `auth.password`: `pyahu_local`
-- `replicas`: `1`
+- `replicas`: `1`; this version only supports a single RabbitMQ node because
+  clustering is not configured yet
 - `storage`: `2Gi`
 - `management`: `true` — the UI is served at `https://rabbitmq.localhost` through
   Traefik; `ports.management` is accepted for compatibility but ignored.
@@ -496,10 +497,10 @@ Defaults:
 
 - `enabled`: `true` when `services.kafka` is present
 - `ports.bootstrap`: `9092`
-- `replicas`: `1`
+- `replicas`: `1`; this version only supports a single KRaft broker
 - `storage`: `4Gi`
 - topic `partitions`: `1`
-- topic `replicas`: `1`
+- topic `replicas`: `1` and no greater than the number of Kafka brokers
 
 Connection output:
 

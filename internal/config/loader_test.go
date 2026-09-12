@@ -821,6 +821,61 @@ services:
 	}
 }
 
+func TestLoadRejectsUnsupportedServiceReplicas(t *testing.T) {
+	tests := []struct {
+		name     string
+		services string
+		want     string
+	}{
+		{
+			name: "kafka brokers",
+			services: `  kafka:
+    enabled: true
+    replicas: 2
+`,
+			want: "services.kafka.replicas currently must be 1",
+		},
+		{
+			name: "rabbitmq nodes",
+			services: `  rabbitmq:
+    enabled: true
+    replicas: 2
+`,
+			want: "services.rabbitmq.replicas currently must be 1",
+		},
+		{
+			name: "topic replication",
+			services: `  kafka:
+    enabled: true
+    replicas: 1
+    topics:
+      - name: orders
+        replicas: 2
+`,
+			want: "services.kafka.topics[0].replicas cannot exceed services.kafka.replicas",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "pyahu.yaml")
+			data := []byte("apiVersion: cli.pyahu.io/v1alpha1\nkind: Stack\nmetadata:\n  name: demo\nservices:\n" + tt.services)
+			if err := os.WriteFile(path, data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			_, err := Load(path)
+			if err == nil {
+				t.Fatal("expected validation error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error does not contain %q: %v", tt.want, err)
+			}
+		})
+	}
+}
+
 func TestLoadFromFlagUsesDefaultDiscovery(t *testing.T) {
 	dir := t.TempDir()
 	isolateUserConfigDir(t)
