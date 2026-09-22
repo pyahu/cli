@@ -1,12 +1,1 @@
-<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pyahu">
-  <defs>
-    <linearGradient id="lg" x1="14" y1="10" x2="106" y2="110" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#93C5FD"/>
-      <stop offset="0.5" stop-color="#60A5FA"/>
-      <stop offset="1" stop-color="#2563EB"/>
-    </linearGradient>
-  </defs>
-  <path fill="url(#lg)" fill-rule="evenodd"
-    d="M14 106V14h38c21 0 34 11.5 34 28.5S73 71 52 71H33v35H14Zm19-51h17c10.5 0 17-5.5 17-13.5S60.5 28 50 28H33v27Z"/>
-  <circle cx="100" cy="100" r="9" fill="url(#lg)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img"><title>Pyahu</title><defs><linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#042DE8"/><stop offset="1" stop-color="#064FFF"/></linearGradient><linearGradient id="top" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0874FF"/><stop offset="1" stop-color="#0060FF"/></linearGradient></defs><rect x="0" y="0" width="64" height="64" rx="0" fill="#F5F7FA"/><g transform="translate(14 7) scale(0.05868544600938967)"><path d="M110 0H385C536 0 644 126 644 272V394C644 489 606 551 522 600L218 734V754C218 816 164 852 91 852C31 852 0 815 0 758V575C0 514 25 475 78 444L218 362V532C233 519 251 508 282 493L422 421C454 404 470 380 470 345V278L380 222C358 203 334 190 305 190H108C47 190 4 157 4 103C4 45 46 0 110 0Z" fill="#0D47FF"/><circle cx="334" cy="326" r="91" fill="#0D47FF"/></g></svg>
