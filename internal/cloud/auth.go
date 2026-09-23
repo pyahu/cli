@@ -68,7 +68,7 @@ func SaveCredentials(c Credentials) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	_, err = file.Write(payload)
 	return err
 }
@@ -121,7 +121,7 @@ func fetchDiscovery(ctx context.Context, client *http.Client, issuer string) (di
 	if err != nil {
 		return discovery{}, fmt.Errorf("reach %s: %w", issuer, err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusOK {
 		return discovery{}, fmt.Errorf("%s answered %s to its own configuration", issuer, res.Status)
 	}
@@ -167,7 +167,7 @@ func StartDeviceLogin(ctx context.Context, cfg Config, client *http.Client) (*De
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("the issuer refused to start a sign-in: %s", res.Status)
 	}
@@ -285,7 +285,7 @@ func exchange(
 	if err != nil {
 		return Credentials{}, 0, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	var body struct {
 		AccessToken      string `json:"access_token"`

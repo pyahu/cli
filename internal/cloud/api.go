@@ -49,7 +49,7 @@ func (c *Client) Environments(ctx context.Context, token string) ([]Environment,
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if err := expectOK(res); err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (c *Client) Credential(ctx context.Context, token, organizationID, tenantID
 	if err != nil {
 		return ClusterCredential{}, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if err := expectOK(res); err != nil {
 		return ClusterCredential{}, err
 	}
