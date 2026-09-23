@@ -31,7 +31,14 @@ func (a *app) newLoginCmd() *cobra.Command {
 			if target == "" {
 				target = device.VerificationURI
 			}
-			_, _ = fmt.Fprintf(a.opts.out, "Open %s\n", target)
+			// The URL is printed whether or not the browser opens: the device flow exists for machines
+			// that have no browser, and the person may well be approving this on their phone.
+			if openInBrowser(target) {
+				_, _ = fmt.Fprintf(a.opts.out, "Opening %s\n", target)
+				_, _ = fmt.Fprintf(a.opts.out, "If it did not open, paste that link yourself.\n")
+			} else {
+				_, _ = fmt.Fprintf(a.opts.out, "Open %s\n", target)
+			}
 			_, _ = fmt.Fprintf(a.opts.out, "and confirm the code: %s\n\n", device.UserCode)
 			if !a.opts.quiet {
 				_, _ = fmt.Fprintln(a.opts.out, "Waiting for you to approve...")

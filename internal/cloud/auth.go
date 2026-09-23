@@ -193,13 +193,57 @@ func StartDeviceLogin(ctx context.Context, cfg Config, client *http.Client) (*De
 	}
 	return &DeviceCode{
 		UserCode:                body.UserCode,
-		VerificationURI:         body.VerificationURI,
-		VerificationURIComplete: body.VerificationURIComplete,
+		VerificationURI:         preferWorkingLoginUI(ctx, client, body.VerificationURI),
+		VerificationURIComplete: preferWorkingLoginUI(ctx, client, body.VerificationURIComplete),
 		interval:                interval,
 		deviceCode:              body.DeviceCode,
 		tokenEndpoint:           d.TokenEndpoint,
 		expiresAt:               expires,
 	}, nil
+}
+
+// legacyZitadelDevicePath is the approval page Zitadel hands out for a device flow even on an instance
+// that requires its newer login UI everywhere else.
+const (
+	legacyZitadelDevicePath = "/ui/login/device"
+	zitadelV2DevicePath     = "/ui/v2/login/device"
+)
+
+// preferWorkingLoginUI points the person at the approval page that actually completes the sign-in.
+//
+// Zitadel can be configured to require its v2 login instance-wide, and then its authorize endpoint sends
+// browsers to /ui/v2/login while the DEVICE endpoint keeps handing out the v1 path. On such an instance
+// the v1 page accepts the password, re-renders itself and never approves the device: the person sees the
+// screen blink and stay put, the CLI polls authorization_pending until the code expires, and nothing is
+// logged as an error on either side. That cost an evening on 2026-09-23 before the asymmetry was found.
+//
+// So: when the issuer hands back the v1 device path, ask whether the v2 one exists, and prefer it when
+// it does. A probe rather than a rewrite, because an issuer serving only v1 must keep working, and this
+// CLI also talks to issuers that are not Zitadel at all. Once an instance sets its v2 base URI the
+// server returns the v2 path itself and this becomes a no-op.
+func preferWorkingLoginUI(ctx context.Context, client *http.Client, raw string) string {
+	if raw == "" || !strings.Contains(raw, legacyZitadelDevicePath) {
+		return raw
+	}
+	candidate := strings.Replace(raw, legacyZitadelDevicePath, zitadelV2DevicePath, 1)
+
+	probe, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(probe, http.MethodGet, candidate, nil)
+	if err != nil {
+		return raw
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		// Unreachable for any reason: keep what the issuer said. A sign-in that might work beats one
+		// that certainly cannot.
+		return raw
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode >= 200 && res.StatusCode < 400 {
+		return candidate
+	}
+	return raw
 }
 
 // Wait polls until the person approves, the code expires, or the context is cancelled.
