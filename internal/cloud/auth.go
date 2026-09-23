@@ -202,46 +202,87 @@ func StartDeviceLogin(ctx context.Context, cfg Config, client *http.Client) (*De
 	}, nil
 }
 
-// legacyZitadelDevicePath is the approval page Zitadel hands out for a device flow even on an instance
-// that requires its newer login UI everywhere else.
+// legacyZitadelLoginPrefix is the login UI Zitadel redirects a device flow into. It is a PREFIX, not a
+// whole path, because the redirect lands on /ui/login/device and from there on /ui/login/login.
 const (
-	legacyZitadelDevicePath = "/ui/login/device"
-	zitadelV2DevicePath     = "/ui/v2/login/device"
+	legacyZitadelLoginPrefix = "/ui/login/"
+	zitadelV2LoginPrefix     = "/ui/v2/login/"
 )
 
 // preferWorkingLoginUI points the person at the approval page that actually completes the sign-in.
 //
 // Zitadel can be configured to require its v2 login instance-wide, and then its authorize endpoint sends
-// browsers to /ui/v2/login while the DEVICE endpoint keeps handing out the v1 path. On such an instance
+// browsers to /ui/v2/login while the DEVICE endpoint still redirects into the v1 UI. On such an instance
 // the v1 page accepts the password, re-renders itself and never approves the device: the person sees the
 // screen blink and stay put, the CLI polls authorization_pending until the code expires, and nothing is
-// logged as an error on either side. That cost an evening on 2026-09-23 before the asymmetry was found.
+// logged as an error on either side. That cost an evening on 2026-09-23.
 //
-// So: when the issuer hands back the v1 device path, ask whether the v2 one exists, and prefer it when
-// it does. A probe rather than a rewrite, because an issuer serving only v1 must keep working, and this
-// CLI also talks to issuers that are not Zitadel at all. Once an instance sets its v2 base URI the
-// server returns the v2 path itself and this becomes a no-op.
+// The check has to FOLLOW the redirect rather than read the URL. The issuer hands back its OIDC endpoint
+// (…/device?user_code=X), not a login path, so there is nothing in the string to match on: which UI the
+// person lands in is only visible in the Location header that endpoint answers with. A first version of
+// this matched the string and therefore never fired, which is how it shipped still broken.
+//
+// Conservative by construction: anything unexpected returns what the issuer said, because a sign-in that
+// might work beats one that certainly cannot, and this CLI also talks to issuers that are not Zitadel.
+// Once an instance sets its v2 base URI the redirect lands on v2 by itself and this becomes a no-op.
 func preferWorkingLoginUI(ctx context.Context, client *http.Client, raw string) string {
-	if raw == "" || !strings.Contains(raw, legacyZitadelDevicePath) {
+	if raw == "" {
 		return raw
 	}
-	candidate := strings.Replace(raw, legacyZitadelDevicePath, zitadelV2DevicePath, 1)
 
 	probe, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(probe, http.MethodGet, candidate, nil)
+	req, err := http.NewRequestWithContext(probe, http.MethodGet, raw, nil)
 	if err != nil {
 		return raw
 	}
-	res, err := client.Do(req)
+	// A client of our own, so the caller's redirect policy is never mutated and the hop is not followed:
+	// the Location header IS the answer we came for.
+	noFollow := &http.Client{
+		Transport: client.Transport,
+		Jar:       client.Jar,
+		Timeout:   client.Timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	res, err := noFollow.Do(req)
 	if err != nil {
-		// Unreachable for any reason: keep what the issuer said. A sign-in that might work beats one
-		// that certainly cannot.
 		return raw
 	}
 	defer func() { _ = res.Body.Close() }()
-	if res.StatusCode >= 200 && res.StatusCode < 400 {
-		return candidate
+
+	location := res.Header.Get("Location")
+	if location == "" || !strings.Contains(location, legacyZitadelLoginPrefix) {
+		return raw
+	}
+
+	// Resolve against the endpoint we asked, so a relative Location (which is what Zitadel sends) becomes
+	// something a browser can be handed.
+	base, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	landed, err := base.Parse(location)
+	if err != nil {
+		return raw
+	}
+	landed.Path = strings.Replace(landed.Path, legacyZitadelLoginPrefix, zitadelV2LoginPrefix, 1)
+
+	// Only prefer the v2 page once it has answered for itself.
+	check, cancelCheck := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelCheck()
+	verify, err := http.NewRequestWithContext(check, http.MethodGet, landed.String(), nil)
+	if err != nil {
+		return raw
+	}
+	got, err := noFollow.Do(verify)
+	if err != nil {
+		return raw
+	}
+	defer func() { _ = got.Body.Close() }()
+	if got.StatusCode >= 200 && got.StatusCode < 400 {
+		return landed.String()
 	}
 	return raw
 }
