@@ -182,10 +182,37 @@ release. Full instructions are in the [installation guide](https://cli.pyahu.io/
 - [Local certificates](https://cli.pyahu.io/docs/certificates)
 - [Backup and restore](https://cli.pyahu.io/docs/backup-restore)
 
+## Pyahu Cloud access
+
+If your team runs on [Pyahu Cloud](https://console.pyahu.cloud), this CLI can also
+point `kubectl` at one of your environments. Sign in once, add the context once,
+and use plain `kubectl` from then on:
+
+```bash
+pyahu login                 # approve the code in your browser
+pyahu kube list             # environments you can reach
+pyahu kube config           # add the context to your kubeconfig
+kubectl get pods            # from here on it is just kubectl
+```
+
+Three things worth knowing:
+
+- **The kubeconfig entry holds no credential.** It records where the cluster is
+  and that this CLI should be asked for a token when one is needed. `kubectl`
+  calls `pyahu` on its own to refresh it, so nothing long-lived sits on disk.
+- **Your kubeconfig is backed up before it is changed**, and every other context
+  in it is left alone.
+- **What you can do there is decided by your role**, on the server, every time a
+  token is issued. Losing access takes effect within minutes.
+
+`pyahu kube doctor` says which step is missing when `kubectl` does not work.
+
 ## Scope
 
-Pyahu focuses on local infrastructure. It does not deploy applications, manage
-remote clusters or replace production infrastructure tooling.
+Pyahu focuses on local infrastructure, plus the one remote thing above: pointing
+`kubectl` at a Pyahu Cloud environment you already have access to. It does not
+deploy applications, provision remote clusters or replace production
+infrastructure tooling.
 
 ## Contributing
 
