@@ -20,11 +20,17 @@ const (
 	// publishes its endpoints, its keys and its capabilities at a well-known URL for anybody to read.
 	DefaultIssuer = "https://zitadel.de.pyahu.cloud"
 
-	// DefaultClientID identifies this CLI to the issuer. It is a PUBLIC client: it holds no secret,
-	// and it cannot, because a secret shipped in a binary on somebody's laptop is not a secret. What
-	// protects the flow is that the person has to approve the sign-in themselves, on a page served by
-	// the issuer, showing a code this CLI printed.
-	DefaultClientID = "pyahu-cli"
+	// DefaultClientID identifies this CLI to the issuer.
+	//
+	// It is a PUBLIC client: it holds no secret, and it cannot, because a secret shipped in a binary on
+	// somebody's laptop is not a secret. What protects the flow is that the person has to approve the
+	// sign-in themselves, on a page served by the issuer, showing a code this CLI printed. The same is
+	// true of the ids `gcloud`, `aws` and `gh` ship.
+	//
+	// It is the issuer's generated id and NOT the application's name. Zitadel names the app
+	// `pyahu-cli` and issues this number as its client id; sending the name gets `client not found`
+	// from the device-authorization endpoint, which reads like a broken CLI rather than a wrong constant.
+	DefaultClientID = "368818328971510112"
 )
 
 // Config is where this CLI points. Every field has a public default and an environment override, so a
